@@ -201,13 +201,50 @@ io.on('connection', (socket) => {
     io.to(to).emit('signal', { signal });
   });
 
+  const bannedWords = [
+    'puta',
+    'puto',
+    'mierda',
+    'maricon',
+    'maricón',
+    'nazi',
+    'kill',
+    'suicide',
+  ];
+  
+  function containsBannedWord(text) {
+    const normalized = text.toLowerCase();
+  
+    return bannedWords.some((word) =>
+      normalized.includes(word)
+    );
+  }
+  
   socket.on('chat-message', ({ message }) => {
     const partnerId = partners.get(socket.id);
-
+  
     if (!partnerId || !message) return;
-
+  
+    const cleanMessage = message.trim();
+  
+    if (!cleanMessage) return;
+  
+    if (cleanMessage.length > 300) return;
+  
+    if (containsBannedWord(cleanMessage)) {
+      console.log(
+        'BLOCKED MESSAGE:',
+        socket.id,
+        cleanMessage
+      );
+  
+      socket.emit('message-blocked');
+  
+      return;
+    }
+  
     io.to(partnerId).emit('chat-message', {
-      message,
+      message: cleanMessage,
     });
   });
 

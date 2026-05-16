@@ -224,15 +224,45 @@ export default function VideoChat({
     }, 300);
   };
 
+  const bannedWords = [
+    'puta',
+    'puto',
+    'mierda',
+    'maricon',
+    'maricón',
+    'nazi',
+    'kill',
+    'suicide',
+  ];
+  
+  const containsBannedWord = (text: string) => {
+    const normalized = text.toLowerCase();
+  
+    return bannedWords.some((word) =>
+      normalized.includes(word)
+    );
+  };
+  
   const sendMessage = () => {
     const cleanMessage = message.trim();
-
+  
     if (!cleanMessage) return;
-
+  
+    if (cleanMessage.length > 300) {
+      alert('El mensaje es demasiado largo.');
+      return;
+    }
+  
+    if (containsBannedWord(cleanMessage)) {
+      alert('Este mensaje no cumple las normas de ChatMia.');
+      setMessage('');
+      return;
+    }
+  
     socketRef.current?.emit('chat-message', {
       message: cleanMessage,
     });
-
+  
     setMessages((prev) => [
       ...prev,
       {
@@ -240,7 +270,7 @@ export default function VideoChat({
         mine: true,
       },
     ]);
-
+  
     setMessage('');
   };
 
