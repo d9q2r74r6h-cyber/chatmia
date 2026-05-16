@@ -492,7 +492,7 @@ export default function VideoChat({
       </section>
 
       <footer className="h-20 border-t border-white/10 bg-black/70 backdrop-blur-xl flex items-center justify-center">
-  <div className="flex gap-3">
+  <div className="flex items-center gap-3">
     <motion.button
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.96 }}
@@ -506,7 +506,7 @@ export default function VideoChat({
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.96 }}
       onClick={reportUser}
-      className="px-6 py-3 rounded-full bg-red-500/20 border border-red-500/30 text-red-300 font-semibold"
+      className="px-6 py-3 rounded-full bg-red-500/20 border border-red-500/30 text-red-300 font-semibold shadow-xl"
     >
       Reportar
     </motion.button>
