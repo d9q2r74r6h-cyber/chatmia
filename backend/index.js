@@ -225,7 +225,16 @@ io.on('connection', (socket) => {
   
   socket.on('chat-message', ({ message }) => {
     const partnerId = partners.get(socket.id);
-    
+    const now = Date.now();
+
+const lastMessage =
+  messageRateLimit.get(socket.id) || 0;
+
+if (now - lastMessage < 1000) {
+  return;
+}
+
+messageRateLimit.set(socket.id, now);
   
     if (!partnerId || !message) return;
   
@@ -244,16 +253,7 @@ io.on('connection', (socket) => {
   
       socket.emit('message-blocked');
 
-      const now = Date.now();
-
-const lastMessage =
-  messageRateLimit.get(socket.id) || 0;
-
-if (now - lastMessage < 1000) {
-  return;
-}
-
-messageRateLimit.set(socket.id, now);
+    
   
       return;
     }
