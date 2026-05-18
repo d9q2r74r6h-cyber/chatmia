@@ -19,6 +19,7 @@ export default function Page() {
   const [gender, setGender] = useState<string | null>(null);
   const [country, setCountry] = useState(countries[0]);
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] =
     useState(true);
 
@@ -72,6 +73,16 @@ export default function Page() {
 
     setUser(user);
 
+    const { data: profileData } = await supabase
+  .from('profiles')
+  .select('*')
+  .eq('id', user.id)
+  .maybeSingle();
+
+if (profileData) {
+  setProfile(profileData);
+}
+
     setCheckingAuth(false);
   };
 
@@ -110,7 +121,7 @@ export default function Page() {
           </div>
 
           <div className="text-sm font-medium truncate">
-            {user?.email}
+          {profile?.username || user?.email}
           </div>
         </div>
 
