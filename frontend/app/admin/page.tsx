@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
 
 type Report = {
   id: number;
@@ -27,37 +26,29 @@ type Event = {
   metadata: any;
 };
 
+type ActiveChat = {
+  id: number;
+  created_at: string;
+  chat_id: string;
+  user1_email: string | null;
+  user2_email: string | null;
+  user1_country: string | null;
+  user2_country: string | null;
+  started_at: string;
+  ended_at: string | null;
+  message_count: number;
+  active: boolean;
+};
+
 export default function AdminPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [activeChats, setActiveChats] = useState<ActiveChat[]>([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
-    const checkAdmin = async () => {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-      
-        const allowedAdmins = [
-          'TU_EMAIL_REAL'
-        ];
-      
-        if (
-          !user?.email ||
-          !allowedAdmins.includes(user.email)
-        ) {
-          router.push('/');
-          return;
-        }
-      
-        loadData();
-      };
-      
-      checkAdmin();
-
-    
+    loadData();
   }, []);
 
   const loadData = async () => {
@@ -78,17 +69,15 @@ export default function AdminPage() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (reportsResult.data) {
-      setReports(reportsResult.data);
-    }
+    const activeChatsResult = await supabase
+      .from('active_chats')
+      .select('*')
+      .order('started_at', { ascending: false });
 
-    if (bannedResult.data) {
-      setBannedUsers(bannedResult.data);
-    }
-
-    if (eventsResult.data) {
-      setEvents(eventsResult.data);
-    }
+    if (reportsResult.data) setReports(reportsResult.data);
+    if (bannedResult.data) setBannedUsers(bannedResult.data);
+    if (eventsResult.data) setEvents(eventsResult.data);
+    if (activeChatsResult.data) setActiveChats(activeChatsResult.data);
 
     setLoading(false);
   };
@@ -97,7 +86,6 @@ export default function AdminPage() {
     if (!email) return;
 
     const confirmBan = confirm(`¿Banear a ${email}?`);
-
     if (!confirmBan) return;
 
     await supabase.from('banned_users').upsert({
@@ -112,7 +100,6 @@ export default function AdminPage() {
 
   const unbanEmail = async (email: string) => {
     const confirmUnban = confirm(`¿Quitar ban a ${email}?`);
-
     if (!confirmUnban) return;
 
     await supabase
@@ -127,6 +114,8 @@ export default function AdminPage() {
   const countEvent = (name: string) => {
     return events.filter((event) => event.event_name === name).length;
   };
+
+  const activeOnly = activeChats.filter((chat) => chat.active);
 
   return (
     <main className="min-h-screen bg-black text-white p-6">
@@ -157,75 +146,100 @@ export default function AdminPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                  <div className="text-sm text-white/40">
-                    Reportes
-                  </div>
-
-                  <div className="text-3xl font-bold">
-                    {reports.length}
-                  </div>
+                  <div className="text-sm text-white/40">Reportes</div>
+                  <div className="text-3xl font-bold">{reports.length}</div>
                 </div>
 
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                  <div className="text-sm text-white/40">
-                    Baneados
-                  </div>
-
-                  <div className="text-3xl font-bold">
-                    {bannedUsers.length}
-                  </div>
+                  <div className="text-sm text-white/40">Baneados</div>
+                  <div className="text-3xl font-bold">{bannedUsers.length}</div>
                 </div>
 
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                  <div className="text-sm text-white/40">
-                    Mensajes
-                  </div>
+                  <div className="text-sm text-white/40">Chats activos</div>
+                  <div className="text-3xl font-bold">{activeOnly.length}</div>
+                </div>
 
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                  <div className="text-sm text-white/40">Mensajes</div>
                   <div className="text-3xl font-bold">
                     {countEvent('message_sent')}
                   </div>
                 </div>
 
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                  <div className="text-sm text-white/40">
-                    Skips
-                  </div>
-
+                  <div className="text-sm text-white/40">Skips</div>
                   <div className="text-3xl font-bold">
                     {countEvent('next_clicked')}
                   </div>
                 </div>
 
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                  <div className="text-sm text-white/40">
-                    Conexiones
-                  </div>
-
+                  <div className="text-sm text-white/40">Conexiones</div>
                   <div className="text-3xl font-bold">
                     {countEvent('chat_connected')}
                   </div>
                 </div>
 
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                  <div className="text-sm text-white/40">
-                    Usuarios reportados
-                  </div>
-
+                  <div className="text-sm text-white/40">Usuarios reportados</div>
                   <div className="text-3xl font-bold">
                     {countEvent('user_reported')}
                   </div>
                 </div>
 
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                  <div className="text-sm text-white/40">
-                    Eventos totales
-                  </div>
-
-                  <div className="text-3xl font-bold">
-                    {events.length}
-                  </div>
+                  <div className="text-sm text-white/40">Eventos totales</div>
+                  <div className="text-3xl font-bold">{events.length}</div>
                 </div>
               </div>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold mb-4">
+                Conversaciones activas
+              </h2>
+
+              {activeOnly.length === 0 ? (
+                <div className="text-white/50">
+                  No hay conversaciones activas.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {activeOnly.map((chat) => (
+                    <div
+                      key={chat.id}
+                      className="bg-green-500/10 border border-green-500/20 rounded-2xl p-5"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-green-300">
+                            Chat activo
+                          </div>
+
+                          <div className="text-sm text-white/70 mt-1">
+                            {chat.user1_email || 'Usuario 1'} ↔{' '}
+                            {chat.user2_email || 'Usuario 2'}
+                          </div>
+
+                          <div className="text-xs text-white/40 mt-1">
+                            {chat.user1_country || 'Sin país'} /{' '}
+                            {chat.user2_country || 'Sin país'}
+                          </div>
+                        </div>
+
+                        <div className="text-sm text-white/60">
+                          {chat.message_count} mensajes
+                        </div>
+                      </div>
+
+                      <div className="mt-3 text-xs text-white/30">
+                        Inicio: {new Date(chat.started_at).toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
 
             <section>
@@ -299,10 +313,7 @@ export default function AdminPage() {
 
                         <button
                           onClick={() =>
-                            banEmail(
-                              report.reporter_email,
-                              report.reason
-                            )
+                            banEmail(report.reporter_email, report.reason)
                           }
                           className="px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 font-medium"
                         >
