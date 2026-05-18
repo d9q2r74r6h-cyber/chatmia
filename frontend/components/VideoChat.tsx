@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import io from 'socket.io-client';
 import Peer from 'simple-peer';
 import { supabase } from '@/lib/supabase';
+import { trackEvent } from '@/lib/analytics';
 
 type Country = {
   code: string;
@@ -29,6 +30,7 @@ export default function VideoChat({
   onBack,
 }: Props) {
   const reportUser = async () => {
+    
     const reason = prompt(
       '¿Por qué deseas reportar este usuario?'
     );
@@ -43,7 +45,11 @@ export default function VideoChat({
       reporter_email: user?.email || 'unknown',
       reason,
     });
-  
+    
+
+    trackEvent('user_reported', {
+      reason,
+    });
     alert(
       'Reporte enviado. Gracias por ayudar a mantener ChatMia seguro.'
     );
@@ -148,10 +154,16 @@ export default function VideoChat({
             stream,
             config: {
               iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:global.stun.twilio.com:3478' },
-              ],
-            },
+                {
+                  urls: 'stun:global.stun.twilio.com:3478',
+                },
+                {
+                  urls: 'turn:global.relay.metered.ca:80',
+                  username: 'admchatmia@outlook.com',
+                  credential: 'Osorno69#',
+                },
+              ]
+            },  
           });
 
           peer.on('signal', (signal) => {
@@ -162,6 +174,9 @@ export default function VideoChat({
           });
 
           peer.on('connect', () => {
+            trackEvent('chat_connected', {
+              country: country.name,
+            });
             matchSound.current?.play().catch(() => {});
             setConnecting(false);
             setConnected(true);
@@ -264,6 +279,7 @@ export default function VideoChat({
   };
 
   const next = () => {
+    trackEvent('next_clicked');
     cleanupRemote();
 
     setTyping(false);
@@ -301,6 +317,7 @@ export default function VideoChat({
   };
   
   const sendMessage = () => {
+    
     const cleanMessage = message.trim();
   
     if (!cleanMessage) return;
@@ -327,7 +344,7 @@ export default function VideoChat({
         mine: true,
       },
     ]);
-  
+    trackEvent('message_sent');
     setMessage('');
   };
 

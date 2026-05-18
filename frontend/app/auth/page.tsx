@@ -122,6 +122,28 @@ export default function AuthPage() {
             ? '¿No tienes cuenta? Crear cuenta'
             : '¿Ya tienes cuenta? Ingresar'}
         </button>
+        <button
+  onClick={async () => {
+    if (!email) {
+      alert('Ingresa tu correo primero.');
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://chatmia.org/reset-password',
+    });
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert('Te enviamos un correo para recuperar tu contraseña.');
+  }}
+  className="mt-4 text-sm text-white/40 hover:text-white transition w-full"
+>
+  Olvidé mi contraseña
+</button>
       </div>
     </main>
   );
