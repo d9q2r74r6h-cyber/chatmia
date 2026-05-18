@@ -19,22 +19,27 @@ export default function Page() {
   const [gender, setGender] = useState<string | null>(null);
   const [country, setCountry] = useState(countries[0]);
   const [user, setUser] = useState<any>(null);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [checkingAuth, setCheckingAuth] =
+    useState(true);
 
   useEffect(() => {
     checkUser();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_, session) => {
-      setUser(session?.user ?? null);
+    } = supabase.auth.onAuthStateChange(
+      async (_, session) => {
+        setUser(session?.user ?? null);
 
-      if (!session?.user) {
-        window.location.href = '/auth';
+        if (!session?.user) {
+          window.location.href = '/auth';
+        }
       }
-    });
+    );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const checkUser = async () => {
@@ -54,18 +59,25 @@ export default function Page() {
       .maybeSingle();
 
     if (bannedUser) {
-      alert('Tu cuenta ha sido suspendida de ChatMia.');
+      alert(
+        'Tu cuenta ha sido suspendida de ChatMia.'
+      );
+
       await supabase.auth.signOut();
+
       window.location.href = '/auth';
+
       return;
     }
 
     setUser(user);
+
     setCheckingAuth(false);
   };
 
   const logout = async () => {
     await supabase.auth.signOut();
+
     window.location.href = '/auth';
   };
 
@@ -91,10 +103,39 @@ export default function Page() {
 
   return (
     <main className="min-h-screen bg-[#070709] text-white flex items-center justify-center px-6 relative overflow-hidden">
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
+        <div className="hidden md:block bg-white/5 border border-white/10 rounded-2xl px-4 py-2 backdrop-blur-xl max-w-xs overflow-hidden">
+          <div className="text-xs text-white/40">
+            Conectado como
+          </div>
+
+          <div className="text-sm font-medium truncate">
+            {user?.email}
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            window.location.href = '/profile';
+          }}
+          className="h-11 px-5 rounded-2xl bg-white/10 border border-white/10 text-white font-semibold hover:bg-white/20 transition"
+        >
+          Perfil
+        </button>
+
+        <button
+          onClick={logout}
+          className="h-11 px-5 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-300 font-semibold hover:bg-red-500/30 transition"
+        >
+          Salir
+        </button>
+      </div>
+
       <div className="w-full max-w-xl">
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 mb-6">
             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+
             <span className="text-sm text-white/70">
               Videochat aleatorio en vivo
             </span>
@@ -105,35 +146,14 @@ export default function Page() {
           </h1>
 
           <p className="text-white/40 mt-5 text-lg leading-relaxed">
-            Conecta instantáneamente con personas de todo el mundo mediante videochat en vivo.
-            Privado, rápido y diseñado para sentirse natural.
+            Conecta instantáneamente con personas de
+            todo el mundo mediante videochat en vivo.
+            Privado, rápido y diseñado para sentirse
+            natural.
           </p>
         </div>
 
         <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-6 backdrop-blur-xl space-y-6">
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-            <div className="text-xs text-white/40">Conectado como</div>
-            <div className="text-sm font-medium truncate">{user?.email}</div>
-
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              <button
-                onClick={() => {
-                  window.location.href = '/profile';
-                }}
-                className="h-11 rounded-2xl bg-blue-500 text-white font-semibold hover:scale-[1.02] active:scale-[0.98] transition"
-              >
-                Perfil
-              </button>
-
-              <button
-                onClick={logout}
-                className="h-11 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-300 font-semibold hover:bg-red-500/30 transition"
-              >
-                Salir
-              </button>
-            </div>
-          </div>
-
           <div>
             <h2 className="text-lg font-medium">
               Elige con quién quieres hablar
@@ -153,10 +173,13 @@ export default function Page() {
               value={country.code}
               onChange={(e) => {
                 const selected = countries.find(
-                  (item) => item.code === e.target.value
+                  (item) =>
+                    item.code === e.target.value
                 );
 
-                if (selected) setCountry(selected);
+                if (selected) {
+                  setCountry(selected);
+                }
               }}
               className="w-full h-14 rounded-2xl bg-white/10 border border-white/10 px-4 outline-none text-white"
             >
@@ -197,7 +220,8 @@ export default function Page() {
         </div>
 
         <div className="mt-6 text-center text-xs text-white/30">
-          Al continuar aceptas nuestras normas de comunidad.
+          Al continuar aceptas nuestras normas de
+          comunidad.
         </div>
       </div>
     </main>
