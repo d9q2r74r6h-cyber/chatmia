@@ -72,8 +72,39 @@ export default function VideoChat({
   const [typing, setTyping] = useState(false);
 
   useEffect(() => {
-    matchSound.current = new Audio('/sounds/match.mp3');
-    messageSound.current = new Audio('/sounds/message.mp3');
+    const checkBan = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+    
+      if (!user?.email) return false;
+    
+      const { data } = await supabase
+        .from('banned_users')
+        .select('*')
+        .eq('email', user.email)
+        .maybeSingle();
+    
+      if (data) {
+        alert(
+          'Tu cuenta ha sido suspendida de ChatMia.'
+        );
+    
+        window.location.href = '/auth';
+    
+        return true;
+      }
+    
+      return false;
+    };
+
+    (async () => {
+  const banned = await checkBan();
+
+  if (banned) return;
+
+  matchSound.current = new Audio('/sounds/match.mp3');
+  messageSound.current = new Audio('/sounds/message.mp3');
 
     const socket = io(
       process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000',
@@ -210,6 +241,7 @@ export default function VideoChat({
       clearTimeout(typingTimeout.current);
       socket.disconnect();
     };
+  })();
   }, [gender]);
 
   const cleanupRemote = () => {

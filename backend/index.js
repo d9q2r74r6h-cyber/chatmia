@@ -159,6 +159,9 @@ function disconnectPair(socketId) {
   io.to(partnerId).emit('partner-left');
 }
 
+const messageRateLimit = new Map();
+const nextRateLimit = new Map();
+
 io.on('connection', (socket) => {
   console.log('CONNECTED:', socket.id);
 
@@ -222,6 +225,7 @@ io.on('connection', (socket) => {
   
   socket.on('chat-message', ({ message }) => {
     const partnerId = partners.get(socket.id);
+    
   
     if (!partnerId || !message) return;
   
@@ -239,6 +243,17 @@ io.on('connection', (socket) => {
       );
   
       socket.emit('message-blocked');
+
+      const now = Date.now();
+
+const lastMessage =
+  messageRateLimit.get(socket.id) || 0;
+
+if (now - lastMessage < 1000) {
+  return;
+}
+
+messageRateLimit.set(socket.id, now);
   
       return;
     }
@@ -256,6 +271,26 @@ io.on('connection', (socket) => {
     io.to(partnerId).emit('typing');
   });
 
+  const now = Date.now();
+
+const nextData =
+  nextRateLimit.get(socket.id) || {
+    count: 0,
+    time: now,
+  };
+
+if (now - nextData.time > 10000) {
+  nextData.count = 0;
+  nextData.time = now;
+}
+
+nextData.count++;
+
+nextRateLimit.set(socket.id, nextData);
+
+if (nextData.count > 5) {
+  return;
+}
   socket.on('next', () => {
     console.log('NEXT:', socket.id);
 
