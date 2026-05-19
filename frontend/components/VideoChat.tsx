@@ -134,17 +134,18 @@ export default function VideoChat({
     },
     audio: true,
   })
-        .then((stream) => {
-          streamRef.current = stream;
+  .then((stream) => {
+    streamRef.current = stream;
 
-          if (localVideo.current) {
-            localVideo.current.srcObject = stream;
-            localVideo.current
-              .play()
-              .catch(console.error);
-          }
+    if (localVideo.current) {
+      localVideo.current.srcObject = stream;
+      localVideo.current.play().catch(console.error);
+    }
 
-          findPartner();
+    socket.emit('find-partner', {
+      gender,
+      country,
+    });
 
           socket.on(
             'matched',
