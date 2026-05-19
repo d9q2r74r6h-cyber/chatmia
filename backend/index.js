@@ -132,25 +132,40 @@ io.on('connection', (socket) => {
       activeChats.set(partnerId, chatId);
 
       
-      try {
-        await supabase.from('active_chats').insert({
-          chat_id: chatId,
-      
-          user1_socket: socket.id,
-          user2_socket: partnerId,
-      
-          user1_email: users.get(socket.id)?.email || null,
-          user2_email: users.get(partnerId)?.email || null,
-      
-          user1_country: users.get(socket.id)?.country || null,
-          user2_country: users.get(partnerId)?.country || null,
-      
-          active: true,
-        });
-      } catch (error) {
-        console.error('ACTIVE CHAT INSERT ERROR:', error);
-      }
-
+      const { error } = await supabase
+      .from('active_chats')
+      .insert({
+        chat_id: chatId,
+    
+        user1_socket: socket.id,
+        user2_socket: partnerId,
+    
+        user1_email:
+          users.get(socket.id)?.email || null,
+    
+        user2_email:
+          users.get(partnerId)?.email || null,
+    
+        user1_country:
+          users.get(socket.id)?.country || null,
+    
+        user2_country:
+          users.get(partnerId)?.country || null,
+    
+        active: true,
+      });
+    
+    if (error) {
+      console.error(
+        'ACTIVE_CHAT INSERT ERROR:',
+        error
+      );
+    } else {
+      console.log(
+        'ACTIVE_CHAT CREATED:',
+        chatId
+      );
+    }
       console.log('MATCHED:', socket.id, partnerId);
 
       socket.emit('matched', {

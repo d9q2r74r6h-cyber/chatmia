@@ -144,10 +144,7 @@ export default function VideoChat({
               .catch(console.error);
           }
 
-          socket.emit('find-partner', {
-            gender,
-            country,
-          });
+          findPartner();
 
           socket.on(
             'matched',
@@ -279,10 +276,7 @@ export default function VideoChat({
             setConnected(false);
             setConnecting(true);
 
-            socket.emit('find-partner', {
-              gender,
-              country,
-            });
+            findPartner();
           });
         })
         .catch(() => {
@@ -317,6 +311,7 @@ export default function VideoChat({
   };
 
   const cleanupAll = () => {
+    
     cleanupRemote();
 
     streamRef.current
@@ -326,6 +321,14 @@ export default function VideoChat({
       });
 
     streamRef.current = null;
+  };
+
+  const findPartner = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+  
+    findPartner();
   };
 
   const next = () => {
