@@ -81,7 +81,7 @@ async function closeActiveChat(socketId) {
 
   if (!chatId) return;
 
-  if (supabase) {
+ /* if (supabase) {
     await supabase
       .from('active_chats')
       .update({
