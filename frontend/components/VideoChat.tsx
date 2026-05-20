@@ -24,11 +24,7 @@ type Message = {
   mine: boolean;
 };
 
-export default function VideoChat({
-  gender,
-  country,
-  onBack,
-}: Props) {
+export default function VideoChat({ gender, country, onBack }: Props) {
   const hasTrackedConnection = useRef(false);
 
   const localVideo = useRef<HTMLVideoElement>(null);
@@ -52,6 +48,7 @@ export default function VideoChat({
 
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [cameraMode, setCameraMode] = useState<'user' | 'environment'>('user');
 
   useEffect(() => {
     const checkBan = async () => {
@@ -78,15 +75,13 @@ export default function VideoChat({
 
     (async () => {
       const banned = await checkBan();
-
       if (banned) return;
 
       matchSound.current = new Audio('/sounds/match.mp3');
       messageSound.current = new Audio('/sounds/message.mp3');
 
       const socket = io(
-        process.env.NEXT_PUBLIC_SOCKET_URL ||
-          'http://localhost:4000',
+        process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000',
         {
           transports: ['websocket'],
         }
@@ -101,7 +96,7 @@ export default function VideoChat({
       navigator.mediaDevices
         .getUserMedia({
           video: {
-            facingMode: 'user',
+            facingMode: cameraMode,
           },
           audio: true,
         })
@@ -227,10 +222,7 @@ export default function VideoChat({
           });
         })
         .catch(() => {
-          alert(
-            'Debes permitir cámara y micrófono para usar ChatMia.'
-          );
-
+          alert('Debes permitir cámara y micrófono para usar ChatMia.');
           setConnecting(false);
           setConnected(false);
         });
@@ -241,7 +233,7 @@ export default function VideoChat({
       clearTimeout(typingTimeout.current);
       socketRef.current?.disconnect();
     };
-  }, [gender, country]);
+  }, [gender, country, cameraMode]);
 
   const cleanupRemote = () => {
     peerRef.current?.destroy();
@@ -302,10 +294,20 @@ export default function VideoChat({
     setCameraEnabled(videoTrack.enabled);
   };
 
+  const switchCamera = () => {
+    const newMode = cameraMode === 'user' ? 'environment' : 'user';
+
+    setCameraMode(newMode);
+    setConnecting(true);
+    setConnected(false);
+    setMessages([]);
+    hasTrackedConnection.current = false;
+
+    socketRef.current?.emit('next');
+  };
+
   const reportUser = async () => {
-    const reason = prompt(
-      '¿Por qué deseas reportar este usuario?'
-    );
+    const reason = prompt('¿Por qué deseas reportar este usuario?');
 
     if (!reason) return;
 
@@ -322,9 +324,7 @@ export default function VideoChat({
       reason,
     });
 
-    alert(
-      'Reporte enviado. Gracias por ayudar a mantener ChatMia seguro.'
-    );
+    alert('Reporte enviado. Gracias por ayudar a mantener ChatMia seguro.');
   };
 
   const bannedWords = [
@@ -341,9 +341,7 @@ export default function VideoChat({
   const containsBannedWord = (text: string) => {
     const normalized = text.toLowerCase();
 
-    return bannedWords.some((word) =>
-      normalized.includes(word)
-    );
+    return bannedWords.some((word) => normalized.includes(word));
   };
 
   const sendMessage = () => {
@@ -567,7 +565,7 @@ export default function VideoChat({
         </motion.aside>
       </section>
 
-      <footer className="h-24 md:h-20 border-t border-white/10 bg-black/70 backdrop-blur-xl flex items-center justify-center px-3">
+      <footer className="h-28 md:h-20 border-t border-white/10 bg-black/70 backdrop-blur-xl flex items-center justify-center px-3">
         <div className="flex flex-wrap items-center justify-center gap-3">
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -585,6 +583,15 @@ export default function VideoChat({
             className="px-5 py-3 rounded-full bg-white/10 border border-white/10 text-white font-semibold"
           >
             {cameraEnabled ? 'Apagar cámara' : 'Encender cámara'}
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={switchCamera}
+            className="px-5 py-3 rounded-full bg-white/10 border border-white/10 text-white font-semibold"
+          >
+            Cambiar cámara
           </motion.button>
 
           <motion.button
