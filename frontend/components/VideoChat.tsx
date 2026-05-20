@@ -31,6 +31,7 @@ export default function VideoChat({ gender, country, onBack }: Props) {
   const localVideoDesktop = useRef<HTMLVideoElement>(null);
   const remoteVideoMobile = useRef<HTMLVideoElement>(null);
   const remoteVideoDesktop = useRef<HTMLVideoElement>(null);
+  const [partnerInfo, setPartnerInfo] = useState<any>(null);
 
   const socketRef = useRef<any>(null);
   const peerRef = useRef<Peer.Instance | null>(null);
@@ -129,7 +130,8 @@ export default function VideoChat({ gender, country, onBack }: Props) {
             country,
           });
 
-          socket.on('matched', ({ partnerId, initiator }) => {
+          socket.on('matched', ({ partnerId, initiator, partner }) => {
+            setPartnerInfo(partner);
             setConnecting(false);
             peerRef.current?.destroy();
 
@@ -435,7 +437,7 @@ export default function VideoChat({ gender, country, onBack }: Props) {
             />
 
             <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs backdrop-blur-md">
-              Desconocido
+            {partnerInfo?.gender || 'Desconocido'} · {partnerInfo?.country || 'Sin país'}
             </div>
 
             <div className="absolute top-3 right-3 flex gap-2">

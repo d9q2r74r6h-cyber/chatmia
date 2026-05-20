@@ -5,6 +5,7 @@ const http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io');
 
+
 const app = express();
 
 app.use(cors());
@@ -100,14 +101,14 @@ io.on('connection', (socket) => {
       socket.emit('matched', {
         partnerId,
         initiator: true,
+        partner: users.get(partnerId) || null,
       });
-
+      
       io.to(partnerId).emit('matched', {
         partnerId: socket.id,
         initiator: false,
+        partner: users.get(socket.id) || null,
       });
-
-      return;
     }
 
     waitingSocketId = socket.id;
