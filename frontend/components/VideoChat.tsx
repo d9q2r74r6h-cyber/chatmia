@@ -24,7 +24,11 @@ type Message = {
   mine: boolean;
 };
 
-export default function VideoChat({ gender, country, onBack }: Props) {
+export default function VideoChat({
+  gender,
+  country,
+  onBack,
+}: Props) {
   const hasTrackedConnection = useRef(false);
 
   const localVideo = useRef<HTMLVideoElement>(null);
@@ -48,7 +52,9 @@ export default function VideoChat({ gender, country, onBack }: Props) {
 
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
-  const [cameraMode, setCameraMode] = useState<'user' | 'environment'>('user');
+  const [cameraMode, setCameraMode] = useState<'user' | 'environment'>(
+    'user'
+  );
 
   useEffect(() => {
     const checkBan = async () => {
@@ -75,6 +81,7 @@ export default function VideoChat({ gender, country, onBack }: Props) {
 
     (async () => {
       const banned = await checkBan();
+
       if (banned) return;
 
       matchSound.current = new Audio('/sounds/match.mp3');
@@ -223,6 +230,7 @@ export default function VideoChat({ gender, country, onBack }: Props) {
         })
         .catch(() => {
           alert('Debes permitir cámara y micrófono para usar ChatMia.');
+
           setConnecting(false);
           setConnected(false);
         });
@@ -295,47 +303,40 @@ export default function VideoChat({ gender, country, onBack }: Props) {
   };
 
   const switchCamera = async () => {
-    const newMode =
-      cameraMode === 'user' ? 'environment' : 'user';
-  
+    const newMode = cameraMode === 'user' ? 'environment' : 'user';
+
     try {
-      const newStream =
-        await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: newMode,
-          },
-          audio: true,
-        });
-  
-      const newVideoTrack =
-        newStream.getVideoTracks()[0];
-  
-      const oldVideoTrack =
-        streamRef.current?.getVideoTracks()[0];
-  
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: newMode,
+        },
+        audio: true,
+      });
+
+      const newVideoTrack = newStream.getVideoTracks()[0];
+
+      const oldVideoTrack = streamRef.current?.getVideoTracks()[0];
+
       if (oldVideoTrack) {
         oldVideoTrack.stop();
         streamRef.current?.removeTrack(oldVideoTrack);
       }
-  
+
       streamRef.current?.addTrack(newVideoTrack);
-  
+
       if (localVideo.current && streamRef.current) {
         localVideo.current.srcObject = streamRef.current;
         localVideo.current.play().catch(console.error);
       }
-  
+
       const sender = (peerRef.current as any)?._pc
         ?.getSenders()
-        .find(
-          (s: RTCRtpSender) =>
-            s.track?.kind === 'video'
-        );
-  
+        .find((s: RTCRtpSender) => s.track?.kind === 'video');
+
       if (sender) {
         await sender.replaceTrack(newVideoTrack);
       }
-  
+
       setCameraMode(newMode);
       setCameraEnabled(true);
     } catch (error) {
@@ -417,7 +418,6 @@ export default function VideoChat({ gender, country, onBack }: Props) {
 
   return (
     <main className="relative min-h-[100dvh] bg-black text-white flex flex-col overflow-hidden">
-      
       <AnimatePresence>
         {connecting && (
           <motion.div
@@ -446,7 +446,7 @@ export default function VideoChat({ gender, country, onBack }: Props) {
         )}
       </AnimatePresence>
 
-      <header className="h-16 border-b border-white/10 bg-black/70 backdrop-blur-xl flex items-center justify-between px-4 md:px-6">
+      <header className="h-16 shrink-0 border-b border-white/10 bg-black/70 backdrop-blur-xl flex items-center justify-between px-4 md:px-6">
         <div className="flex flex-col md:flex-row md:items-center md:gap-4">
           <div className="flex items-center gap-3">
             <h1 className="font-semibold tracking-wide text-lg">
@@ -456,9 +456,7 @@ export default function VideoChat({ gender, country, onBack }: Props) {
             <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 text-xs">
               <span className="text-base">{country.flag}</span>
 
-              <span className="text-white/70">
-                {country.name}
-              </span>
+              <span className="text-white/70">{country.name}</span>
             </div>
           </div>
 
@@ -490,32 +488,12 @@ export default function VideoChat({ gender, country, onBack }: Props) {
       </header>
 
       <section className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-2 p-2 md:p-3 overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div className="relative h-full min-h-0">
           <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.35 }}
-            className="relative rounded-3xl overflow-hidden bg-neutral-900 border border-white/10 shadow-2xl"
-          >
-            <video
-              ref={localVideo}
-              autoPlay
-              muted
-              playsInline
-              controls={false}
-              className="w-full h-full object-cover bg-black"
-            />
-
-            <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-xs border border-white/10">
-              Tú
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.08 }}
-            className="relative rounded-3xl overflow-hidden bg-neutral-900 border border-white/10 shadow-2xl"
+            className="relative w-full h-full rounded-3xl overflow-hidden bg-black border border-white/10"
           >
             <video
               ref={remoteVideo}
@@ -523,11 +501,70 @@ export default function VideoChat({ gender, country, onBack }: Props) {
               playsInline
               muted={false}
               controls={false}
-              className="w-full h-full object-cover bg-black"
+              className="w-full h-full object-cover"
             />
 
             <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-xs border border-white/10">
               Desconocido
+            </div>
+
+            <div className="absolute bottom-4 right-4 flex gap-2">
+              <button
+                onClick={next}
+                className="px-5 py-3 rounded-full bg-white text-black text-sm font-semibold shadow-xl"
+              >
+                Siguiente
+              </button>
+
+              <button
+                onClick={reportUser}
+                className="px-5 py-3 rounded-full bg-red-500/20 border border-red-500/30 text-red-300 text-sm font-semibold"
+              >
+                Reportar
+              </button>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="absolute top-3 right-3 z-30 w-28 h-40 md:w-64 md:h-80 rounded-2xl overflow-hidden border border-white/10 bg-black shadow-2xl"
+          >
+            <video
+              ref={localVideo}
+              autoPlay
+              muted
+              playsInline
+              controls={false}
+              className="w-full h-full object-cover"
+            />
+
+            <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded-full text-[10px]">
+              Tú
+            </div>
+
+            <div className="absolute top-2 left-2 flex flex-col gap-2">
+              <button
+                onClick={toggleMic}
+                className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md text-xs"
+              >
+                {micEnabled ? '🎤' : '🔇'}
+              </button>
+
+              <button
+                onClick={toggleCamera}
+                className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md text-xs"
+              >
+                {cameraEnabled ? '📷' : '🚫'}
+              </button>
+
+              <button
+                onClick={switchCamera}
+                className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md text-xs"
+              >
+                🔄
+              </button>
             </div>
           </motion.div>
         </div>
@@ -536,7 +573,7 @@ export default function VideoChat({ gender, country, onBack }: Props) {
           initial={{ opacity: 0, x: 18 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.35, delay: 0.12 }}
-          className="bg-white/[0.03] border border-white/10 rounded-3xl backdrop-blur-xl flex flex-col overflow-hidden"
+          className="hidden lg:flex bg-white/[0.03] border border-white/10 rounded-3xl backdrop-blur-xl flex-col overflow-hidden"
         >
           <div className="p-4 border-b border-white/10">
             <h2 className="font-medium">Chat en vivo</h2>
@@ -604,54 +641,52 @@ export default function VideoChat({ gender, country, onBack }: Props) {
         </motion.aside>
       </section>
 
-      <footer className="border-t border-white/10 bg-black/80 backdrop-blur-xl px-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
-  <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap pb-1">
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.96 }}
-      onClick={toggleMic}
-      className="shrink-0 px-5 py-3 rounded-full bg-white/10 border border-white/10 text-white font-semibold"
-    >
-      {micEnabled ? 'Silenciar' : 'Activar mic'}
-    </motion.button>
+      <div className="lg:hidden border-t border-white/10 bg-black/80 backdrop-blur-xl px-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
+        <div className="max-h-24 overflow-y-auto space-y-2 mb-3">
+          {messages.slice(-3).map((msg, index) => (
+            <div
+              key={`${msg.text}-${index}`}
+              className={`text-xs px-3 py-2 rounded-2xl max-w-[85%] ${
+                msg.mine
+                  ? 'ml-auto bg-white text-black'
+                  : 'bg-white/10 text-white'
+              }`}
+            >
+              {msg.text}
+            </div>
+          ))}
 
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.96 }}
-      onClick={toggleCamera}
-      className="shrink-0 px-5 py-3 rounded-full bg-white/10 border border-white/10 text-white font-semibold"
-    >
-      {cameraEnabled ? 'Apagar cámara' : 'Encender cámara'}
-    </motion.button>
+          {typing && (
+            <div className="text-xs text-white/40">
+              Escribiendo...
+            </div>
+          )}
+        </div>
 
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.96 }}
-      onClick={switchCamera}
-      className="shrink-0 px-5 py-3 rounded-full bg-white/10 border border-white/10 text-white font-semibold"
-    >
-      Cambiar cámara
-    </motion.button>
+        <div className="flex gap-2">
+          <input
+            value={message}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              socketRef.current?.emit('typing');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                sendMessage();
+              }
+            }}
+            placeholder="Mensaje..."
+            className="flex-1 h-11 rounded-2xl bg-white/5 border border-white/10 px-4 outline-none"
+          />
 
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.96 }}
-      onClick={next}
-      className="shrink-0 px-8 py-3 rounded-full bg-white text-black font-semibold shadow-xl"
-    >
-      Siguiente
-    </motion.button>
-
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.96 }}
-      onClick={reportUser}
-      className="shrink-0 px-6 py-3 rounded-full bg-red-500/20 border border-red-500/30 text-red-300 font-semibold shadow-xl"
-    >
-      Reportar
-    </motion.button>
-  </div>
-</footer>
+          <button
+            onClick={sendMessage}
+            className="px-5 rounded-2xl bg-white text-black font-medium"
+          >
+            Enviar
+          </button>
+        </div>
+      </div>
     </main>
   );
 }
