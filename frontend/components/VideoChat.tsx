@@ -417,253 +417,93 @@ export default function VideoChat({
   };
 
   return (
-    <main className="relative min-h-[100dvh] bg-black text-white flex flex-col overflow-hidden">
+    <main className="relative h-[100dvh] bg-black text-white flex flex-col overflow-hidden">
       <AnimatePresence>
         {connecting && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
             className="absolute inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center"
           >
-            <motion.div
-              initial={{ scale: 0.96, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.96, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="text-center"
-            >
+            <div className="text-center">
               <div className="text-xl font-semibold animate-pulse">
                 Buscando a alguien...
               </div>
-
               <div className="text-sm text-white/40 mt-2">
                 Conectando alrededor del mundo
               </div>
-            </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      <header className="h-16 shrink-0 border-b border-white/10 bg-black/70 backdrop-blur-xl flex items-center justify-between px-4 md:px-6">
-        <div className="flex flex-col md:flex-row md:items-center md:gap-4">
-          <div className="flex items-center gap-3">
-            <h1 className="font-semibold tracking-wide text-lg">
-              ChatMia
-            </h1>
-
-            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 text-xs">
-              <span className="text-base">{country.flag}</span>
-
-              <span className="text-white/70">{country.name}</span>
-            </div>
-          </div>
-
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="text-[11px] md:text-xs text-white/50 hover:text-white transition text-left"
-            >
-              Cambiar preferencia
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 md:gap-3">
-          <div className="hidden sm:block text-sm text-white/60">
-            {online} online
-          </div>
-
-          <div
-            className={`text-[11px] md:text-xs px-3 py-1 rounded-full border ${
-              connected
-                ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                : 'bg-yellow-500/10 text-yellow-300 border-yellow-500/20'
-            }`}
-          >
-            {connected ? 'Conectado' : 'Buscando'}
-          </div>
+  
+      <header className="h-14 shrink-0 border-b border-white/10 bg-black flex items-center justify-between px-4">
+        <div className="font-semibold">ChatMia</div>
+  
+        <div className="flex items-center gap-2 text-xs">
+          <span>{country.flag}</span>
+          <span className="text-white/60">{online} online</span>
         </div>
       </header>
-
-      <section className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-2 p-2 md:p-3 overflow-hidden">
-        <div className="relative h-full min-h-0">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.35 }}
-            className="relative w-full h-full rounded-3xl overflow-hidden bg-black border border-white/10"
-          >
-            <video
-              ref={remoteVideo}
-              autoPlay
-              playsInline
-              muted={false}
-              controls={false}
-              className="w-full h-full object-cover"
-            />
-
-            <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-xs border border-white/10">
-              Desconocido
-            </div>
-
-            <div className="absolute bottom-4 right-4 flex gap-2">
-              <button
-                onClick={next}
-                className="px-5 py-3 rounded-full bg-white text-black text-sm font-semibold shadow-xl"
-              >
-                Siguiente
-              </button>
-
-              <button
-                onClick={reportUser}
-                className="px-5 py-3 rounded-full bg-red-500/20 border border-red-500/30 text-red-300 text-sm font-semibold"
-              >
-                Reportar
-              </button>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3 }}
-            className="absolute top-3 right-3 z-30 w-28 h-40 md:w-64 md:h-80 rounded-2xl overflow-hidden border border-white/10 bg-black shadow-2xl"
-          >
-            <video
-              ref={localVideo}
-              autoPlay
-              muted
-              playsInline
-              controls={false}
-              className="w-full h-full object-cover"
-            />
-
-            <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded-full text-[10px]">
-              Tú
-            </div>
-
-            <div className="absolute top-2 left-2 flex flex-col gap-2">
-              <button
-                onClick={toggleMic}
-                className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md text-xs"
-              >
-                {micEnabled ? '🎤' : '🔇'}
-              </button>
-
-              <button
-                onClick={toggleCamera}
-                className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md text-xs"
-              >
-                {cameraEnabled ? '📷' : '🚫'}
-              </button>
-
-              <button
-                onClick={switchCamera}
-                className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md text-xs"
-              >
-                🔄
-              </button>
-            </div>
-          </motion.div>
+  
+      <section className="flex-1 min-h-0 flex flex-col">
+        <div className="relative flex-1 min-h-0 border-b border-white/10 bg-black">
+          <video
+            ref={remoteVideo}
+            autoPlay
+            playsInline
+            muted={false}
+            controls={false}
+            className="w-full h-full object-cover"
+          />
+  
+          <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs">
+            Desconocido
+          </div>
         </div>
-
-        <motion.aside
-          initial={{ opacity: 0, x: 18 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.35, delay: 0.12 }}
-          className="hidden lg:flex bg-white/[0.03] border border-white/10 rounded-3xl backdrop-blur-xl flex-col overflow-hidden"
-        >
-          <div className="p-4 border-b border-white/10">
-            <h2 className="font-medium">Chat en vivo</h2>
-
-            <AnimatePresence>
-              {typing && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  className="text-xs text-white/40 mt-1"
-                >
-                  Escribiendo...
-                </motion.div>
-              )}
-            </AnimatePresence>
+  
+        <div className="relative flex-1 min-h-0 bg-black">
+          <video
+            ref={localVideo}
+            autoPlay
+            muted
+            playsInline
+            controls={false}
+            className="w-full h-full object-cover"
+          />
+  
+          <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs">
+            Tú
           </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            <AnimatePresence initial={false}>
-              {messages.map((msg, index) => (
-                <motion.div
-                  key={`${msg.text}-${index}`}
-                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  transition={{ duration: 0.18 }}
-                  className={`max-w-[85%] px-4 py-2 rounded-2xl text-sm ${
-                    msg.mine
-                      ? 'ml-auto bg-white text-black'
-                      : 'bg-white/10 text-white'
-                  }`}
-                >
-                  {msg.text}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-
-          <div className="p-3 border-t border-white/10 flex gap-2">
-            <input
-              value={message}
-              onChange={(e) => {
-                setMessage(e.target.value);
-                socketRef.current?.emit('typing');
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  sendMessage();
-                }
-              }}
-              placeholder="Escribe un mensaje..."
-              className="flex-1 h-11 rounded-2xl bg-white/5 border border-white/10 px-4 outline-none focus:border-white/30 transition"
-            />
-
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={sendMessage}
-              className="px-5 rounded-2xl bg-white text-black font-medium"
+  
+          <div className="absolute top-3 right-3 flex gap-2">
+            <button
+              onClick={toggleMic}
+              className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md"
             >
-              Enviar
-            </motion.button>
+              {micEnabled ? '🎤' : '🔇'}
+            </button>
+  
+            <button
+              onClick={toggleCamera}
+              className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md"
+            >
+              {cameraEnabled ? '📷' : '🚫'}
+            </button>
+  
+            <button
+              onClick={switchCamera}
+              className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md"
+            >
+              🔄
+            </button>
           </div>
-        </motion.aside>
+        </div>
       </section>
-
-      <div className="lg:hidden border-t border-white/10 bg-black/80 backdrop-blur-xl px-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
-        <div className="max-h-24 overflow-y-auto space-y-2 mb-3">
-          {messages.slice(-3).map((msg, index) => (
-            <div
-              key={`${msg.text}-${index}`}
-              className={`text-xs px-3 py-2 rounded-2xl max-w-[85%] ${
-                msg.mine
-                  ? 'ml-auto bg-white text-black'
-                  : 'bg-white/10 text-white'
-              }`}
-            >
-              {msg.text}
-            </div>
-          ))}
-
-          {typing && (
-            <div className="text-xs text-white/40">
-              Escribiendo...
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-2">
+  
+      <footer className="shrink-0 border-t border-white/10 bg-black/90 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
+        <div className="flex gap-2 mb-3">
           <input
             value={message}
             onChange={(e) => {
@@ -671,14 +511,12 @@ export default function VideoChat({
               socketRef.current?.emit('typing');
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                sendMessage();
-              }
+              if (e.key === 'Enter') sendMessage();
             }}
             placeholder="Mensaje..."
-            className="flex-1 h-11 rounded-2xl bg-white/5 border border-white/10 px-4 outline-none"
+            className="flex-1 h-11 rounded-2xl bg-white/10 border border-white/10 px-4 outline-none"
           />
-
+  
           <button
             onClick={sendMessage}
             className="px-5 rounded-2xl bg-white text-black font-medium"
@@ -686,7 +524,32 @@ export default function VideoChat({
             Enviar
           </button>
         </div>
-      </div>
+  
+        <div className="flex gap-2 overflow-x-auto">
+          <button
+            onClick={next}
+            className="shrink-0 px-6 py-3 rounded-full bg-white text-black font-semibold"
+          >
+            Siguiente
+          </button>
+  
+          <button
+            onClick={reportUser}
+            className="shrink-0 px-6 py-3 rounded-full bg-red-500/20 border border-red-500/30 text-red-300 font-semibold"
+          >
+            Reportar
+          </button>
+  
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="shrink-0 px-6 py-3 rounded-full bg-white/10 border border-white/10 text-white"
+            >
+              Volver
+            </button>
+          )}
+        </div>
+      </footer>
     </main>
   );
 }
