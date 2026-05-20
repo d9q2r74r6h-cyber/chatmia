@@ -294,16 +294,54 @@ export default function VideoChat({ gender, country, onBack }: Props) {
     setCameraEnabled(videoTrack.enabled);
   };
 
-  const switchCamera = () => {
-    const newMode = cameraMode === 'user' ? 'environment' : 'user';
-
-    setCameraMode(newMode);
-    setConnecting(true);
-    setConnected(false);
-    setMessages([]);
-    hasTrackedConnection.current = false;
-
-    socketRef.current?.emit('next');
+  const switchCamera = async () => {
+    const newMode =
+      cameraMode === 'user' ? 'environment' : 'user';
+  
+    try {
+      const newStream =
+        await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: newMode,
+          },
+          audio: true,
+        });
+  
+      const newVideoTrack =
+        newStream.getVideoTracks()[0];
+  
+      const oldVideoTrack =
+        streamRef.current?.getVideoTracks()[0];
+  
+      if (oldVideoTrack) {
+        oldVideoTrack.stop();
+        streamRef.current?.removeTrack(oldVideoTrack);
+      }
+  
+      streamRef.current?.addTrack(newVideoTrack);
+  
+      if (localVideo.current && streamRef.current) {
+        localVideo.current.srcObject = streamRef.current;
+        localVideo.current.play().catch(console.error);
+      }
+  
+      const sender = (peerRef.current as any)?._pc
+        ?.getSenders()
+        .find(
+          (s: RTCRtpSender) =>
+            s.track?.kind === 'video'
+        );
+  
+      if (sender) {
+        await sender.replaceTrack(newVideoTrack);
+      }
+  
+      setCameraMode(newMode);
+      setCameraEnabled(true);
+    } catch (error) {
+      console.error(error);
+      alert('No se pudo cambiar la cámara.');
+    }
   };
 
   const reportUser = async () => {
@@ -379,6 +417,7 @@ export default function VideoChat({ gender, country, onBack }: Props) {
 
   return (
     <main className="relative min-h-[100dvh] bg-black text-white flex flex-col overflow-hidden">
+      
       <AnimatePresence>
         {connecting && (
           <motion.div
@@ -450,7 +489,7 @@ export default function VideoChat({ gender, country, onBack }: Props) {
         </div>
       </header>
 
-      <section className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-2 p-2 md:p-3 pb-1">
+      <section className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-2 p-2 md:p-3 overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <motion.div
             initial={{ opacity: 0, y: 18 }}
@@ -565,54 +604,54 @@ export default function VideoChat({ gender, country, onBack }: Props) {
         </motion.aside>
       </section>
 
-      <footer className="border-t border-white/10 bg-black/80 backdrop-blur-xl px-3 py-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
-  <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={toggleMic}
-            className="px-5 py-3 rounded-full bg-white/10 border border-white/10 text-white font-semibold"
-          >
-            {micEnabled ? 'Silenciar' : 'Activar mic'}
-          </motion.button>
+      <footer className="border-t border-white/10 bg-black/80 backdrop-blur-xl px-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
+  <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap pb-1">
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.96 }}
+      onClick={toggleMic}
+      className="shrink-0 px-5 py-3 rounded-full bg-white/10 border border-white/10 text-white font-semibold"
+    >
+      {micEnabled ? 'Silenciar' : 'Activar mic'}
+    </motion.button>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={toggleCamera}
-            className="px-5 py-3 rounded-full bg-white/10 border border-white/10 text-white font-semibold"
-          >
-            {cameraEnabled ? 'Apagar cámara' : 'Encender cámara'}
-          </motion.button>
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.96 }}
+      onClick={toggleCamera}
+      className="shrink-0 px-5 py-3 rounded-full bg-white/10 border border-white/10 text-white font-semibold"
+    >
+      {cameraEnabled ? 'Apagar cámara' : 'Encender cámara'}
+    </motion.button>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={switchCamera}
-            className="px-5 py-3 rounded-full bg-white/10 border border-white/10 text-white font-semibold"
-          >
-            Cambiar cámara
-          </motion.button>
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.96 }}
+      onClick={switchCamera}
+      className="shrink-0 px-5 py-3 rounded-full bg-white/10 border border-white/10 text-white font-semibold"
+    >
+      Cambiar cámara
+    </motion.button>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={next}
-            className="px-8 py-3 rounded-full bg-white text-black font-semibold shadow-xl"
-          >
-            Siguiente
-          </motion.button>
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.96 }}
+      onClick={next}
+      className="shrink-0 px-8 py-3 rounded-full bg-white text-black font-semibold shadow-xl"
+    >
+      Siguiente
+    </motion.button>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={reportUser}
-            className="px-6 py-3 rounded-full bg-red-500/20 border border-red-500/30 text-red-300 font-semibold shadow-xl"
-          >
-            Reportar
-          </motion.button>
-        </div>
-      </footer>
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.96 }}
+      onClick={reportUser}
+      className="shrink-0 px-6 py-3 rounded-full bg-red-500/20 border border-red-500/30 text-red-300 font-semibold shadow-xl"
+    >
+      Reportar
+    </motion.button>
+  </div>
+</footer>
     </main>
   );
 }
