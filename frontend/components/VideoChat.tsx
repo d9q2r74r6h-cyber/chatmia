@@ -317,7 +317,7 @@ const reconnectTimeout = useRef<any>(null);
 
         clearInterval(remoteStreamTimeout.current);
 
-        remoteStreamTimeout.current = setInterval(() => {
+       /* remoteStreamTimeout.current = setInterval(() => {
           const secondsWithoutMedia =
             (Date.now() - lastRemoteTrackTime.current) / 1000;
 
@@ -325,7 +325,7 @@ const reconnectTimeout = useRef<any>(null);
             clearInterval(remoteStreamTimeout.current);
             next();
           }
-        }, 5000);
+        }, 5000);*/
 
         peerRef.current = peer;
       });
@@ -678,12 +678,7 @@ clearTimeout(reconnectTimeout.current);
             </div>
 
             <div className="absolute top-3 right-3 flex gap-2">
-              <button
-                onClick={next}
-                className="px-5 py-2 rounded-full bg-white text-black text-sm font-semibold"
-              >
-                Siguiente
-              </button>
+              
 
               <button
                 onClick={reportUser}
@@ -729,6 +724,21 @@ clearTimeout(reconnectTimeout.current);
               >
                 🔄
               </button>
+              <div className="flex gap-2">
+  <button
+    onClick={next}
+    className="flex-1 h-12 rounded-2xl bg-white text-black font-semibold"
+  >
+    Siguiente
+  </button>
+
+  <button
+    onClick={reportUser}
+    className="flex-1 h-12 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-300 font-semibold"
+  >
+    Reportar
+  </button>
+</div>
             </div>
 
             <div className="absolute bottom-3 left-3 right-3 space-y-2">
