@@ -295,12 +295,13 @@ export default function VideoChat({
         peer.on('error', () => {
           setConnected(false);
           setConnecting(true);
-
-          setTimeout(() => {
-            next();
-          }, 800);
+        });
+        
+        peer.on('close', () => {
+          setConnected(false);
         });
 
+        
         peer.on('close', () => {
           setConnected(false);
           setConnecting(true);
