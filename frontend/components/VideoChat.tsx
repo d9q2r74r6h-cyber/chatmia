@@ -45,10 +45,19 @@ export default function VideoChat({
   const matchSound = useRef<HTMLAudioElement | null>(null);
   const messageSound = useRef<HTMLAudioElement | null>(null);
   const typingTimeout = useRef<any>(null);
+  const remoteStreamTimeout = useRef<any>(null);
+  const statsInterval = useRef<any>(null);
+const lastRemoteTrackTime = useRef(Date.now());
 
   const [online, setOnline] = useState(0);
   const [connecting, setConnecting] = useState(true);
+  const [transitioning, setTransitioning] =
+  useState(false);
   const [connected, setConnected] = useState(false);
+  const [connectionQuality, setConnectionQuality] =
+  useState<'excellent' | 'medium' | 'bad'>(
+    'excellent'
+  );
 
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -179,23 +188,88 @@ export default function VideoChat({
               matchSound.current?.play().catch(() => {});
               setConnecting(false);
               setConnected(true);
+              statsInterval.current = setInterval(async () => {
+                try {
+                  const pc = (peer as any)._pc;
+              
+                  if (!pc) return;
+              
+                  const stats = await pc.getStats();
+              
+                  let rtt = 0;
+              
+                  stats.forEach((report: any) => {
+                    if (
+                      report.type === 'candidate-pair' &&
+                      report.state === 'succeeded'
+                    ) {
+                      rtt =
+                        report.currentRoundTripTime || 0;
+                    }
+                  });
+              
+                  if (rtt < 0.15) {
+                    setConnectionQuality('excellent');
+                  } else if (rtt < 0.35) {
+                    setConnectionQuality('medium');
+                  } else {
+                    setConnectionQuality('bad');
+                  }
+                } catch (err) {
+                  console.error(err);
+                }
+              }, 5000);
             });
 
             peer.on('stream', (remoteStream) => {
               attachRemoteStream(remoteStream);
+              lastRemoteTrackTime.current = Date.now();
+
+remoteStream.getTracks().forEach((track) => {
+  track.onmute = () => {
+    console.log('REMOTE TRACK MUTED');
+  };
+
+  track.onunmute = () => {
+    lastRemoteTrackTime.current = Date.now();
+  };
+});
               setConnecting(false);
               setConnected(true);
             });
 
             peer.on('error', () => {
-              setConnecting(false);
               setConnected(false);
+              setConnecting(true);
+            
+              setTimeout(() => {
+                next();
+              }, 800);
             });
-
+            
             peer.on('close', () => {
               setConnected(false);
+              setConnecting(true);
+            
+              setTimeout(() => {
+                next();
+              }, 800);
             });
-
+            remoteStreamTimeout.current = setInterval(() => {
+              const secondsWithoutMedia =
+                (Date.now() - lastRemoteTrackTime.current) / 1000;
+            
+              if (
+                connected &&
+                secondsWithoutMedia > 15
+              ) {
+                console.log('BLACK SCREEN DETECTED');
+            
+                clearInterval(remoteStreamTimeout.current);
+            
+                next();
+              }
+            }, 5000);
             peerRef.current = peer;
           });
 
@@ -249,6 +323,8 @@ export default function VideoChat({
     })();
 
     return () => {
+      clearInterval(statsInterval.current);
+      clearInterval(remoteStreamTimeout.current);
       cleanupAll();
       clearTimeout(typingTimeout.current);
       socketRef.current?.disconnect();
@@ -279,26 +355,32 @@ export default function VideoChat({
   const next = () => {
     hasTrackedConnection.current = false;
     setPartnerInfo(null);
-
+  
+    setTransitioning(true);
+  
     trackEvent('next_clicked');
-
+  
     cleanupRemote();
-
+  
     setTyping(false);
     setMessages([]);
     setConnected(false);
-    setConnecting(true);
-
-    socketRef.current?.emit('next');
-
+  
     setTimeout(() => {
-      socketRef.current?.emit('find-partner', {
-        gender,
-        country,
-      });
-    }, 300);
+      setConnecting(true);
+  
+      socketRef.current?.emit('next');
+  
+      setTimeout(() => {
+        socketRef.current?.emit('find-partner', {
+          gender,
+          country,
+        });
+  
+        setTransitioning(false);
+      }, 400);
+    }, 250);
   };
-
   const toggleMic = () => {
     const audioTrack = streamRef.current?.getAudioTracks()[0];
 
@@ -472,21 +554,33 @@ export default function VideoChat({
 
   return (
     <main className="relative h-[100dvh] bg-black text-white flex flex-col overflow-hidden">
-      <AnimatePresence>
-        {connecting && (
-          <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-xl font-semibold animate-pulse">
-                Buscando a alguien...
-              </div>
+    <AnimatePresence>
+  {connecting && (
+    <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center">
+      <div className="text-center">
+        <div className="text-xl font-semibold animate-pulse">
+          Buscando a alguien...
+        </div>
 
-              <div className="text-sm text-white/40 mt-2">
-                Conectando alrededor del mundo
-              </div>
-            </div>
-          </div>
-        )}
-      </AnimatePresence>
+        <div className="text-sm text-white/40 mt-2">
+          Conectando alrededor del mundo
+        </div>
+      </div>
+    </div>
+  )}
+
+  {transitioning && (
+    <div className="absolute inset-0 z-50 bg-black flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <div className="w-16 h-16 rounded-full border-4 border-white/20 border-t-white animate-spin mx-auto" />
+
+        <div className="text-white/70 text-sm tracking-wide">
+          Conectando siguiente persona...
+        </div>
+      </div>
+    </div>
+  )}
+</AnimatePresence>
 
       <header className="h-14 shrink-0 border-b border-white/10 bg-black flex items-center justify-between px-4">
         <div className="font-semibold text-sm md:text-base">
@@ -498,6 +592,21 @@ export default function VideoChat({
 
           <span className="text-white/60">
             {online} online
+            <span
+  className={`px-2 py-1 rounded-full text-[10px] ${
+    connectionQuality === 'excellent'
+      ? 'bg-green-500/20 text-green-300'
+      : connectionQuality === 'medium'
+      ? 'bg-yellow-500/20 text-yellow-300'
+      : 'bg-red-500/20 text-red-300'
+  }`}
+>
+  {connectionQuality === 'excellent'
+    ? '🟢 Excelente'
+    : connectionQuality === 'medium'
+    ? '🟡 Media'
+    : '🔴 Mala'}
+</span>
           </span>
 
           <span
@@ -523,7 +632,7 @@ export default function VideoChat({
   controls={false}
   disablePictureInPicture
   controlsList="nodownload nofullscreen noremoteplayback"
-  className="w-full h-full object-cover"
+  className="w-full h-full object-cover transition-opacity duration-300"
 />
 
             <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs backdrop-blur-md">
@@ -657,7 +766,7 @@ export default function VideoChat({
   controls={false}
   disablePictureInPicture
   controlsList="nodownload nofullscreen noremoteplayback"
-  className="w-full h-full object-cover"
+  className="w-full h-full object-cover transition-opacity duration-300"
 />
 
             <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs">
