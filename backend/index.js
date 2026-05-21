@@ -122,6 +122,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('chat-message', ({ message }) => {
+    socket.on('reaction', ({ emoji }) => {
+      const partnerId = partners.get(socket.id);
+    
+      if (!partnerId) return;
+    
+      io.to(partnerId).emit('reaction', {
+        emoji,
+      });
+    });
     const now = Date.now();
 
     const lastMessage =

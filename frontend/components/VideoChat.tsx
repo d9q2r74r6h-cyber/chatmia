@@ -44,28 +44,28 @@ export default function VideoChat({
 
   const matchSound = useRef<HTMLAudioElement | null>(null);
   const messageSound = useRef<HTMLAudioElement | null>(null);
+
   const typingTimeout = useRef<any>(null);
   const remoteStreamTimeout = useRef<any>(null);
   const statsInterval = useRef<any>(null);
-const lastRemoteTrackTime = useRef(Date.now());
+  const lastRemoteTrackTime = useRef(Date.now());
 
   const [online, setOnline] = useState(0);
   const [connecting, setConnecting] = useState(true);
-  const [transitioning, setTransitioning] =
-  useState(false);
+  const [transitioning, setTransitioning] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [remoteReady, setRemoteReady] = useState(false);
+
   const [connectionQuality, setConnectionQuality] =
-  useState<'excellent' | 'medium' | 'bad'>(
-    'excellent'
-  );
+    useState<'excellent' | 'medium' | 'bad'>('excellent');
 
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [typing, setTyping] = useState(false);
+  const [reaction, setReaction] = useState('');
 
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
-  
 
   const [partnerInfo, setPartnerInfo] = useState<any>(null);
 
@@ -93,24 +93,28 @@ const lastRemoteTrackTime = useRef(Date.now());
     };
 
     const attachLocalStream = (stream: MediaStream) => {
-      [localVideoMobile.current, localVideoDesktop.current].forEach((video) => {
-        if (video) {
-          video.srcObject = stream;
-          video.play().catch(console.error);
+      [localVideoMobile.current, localVideoDesktop.current].forEach(
+        (video) => {
+          if (video) {
+            video.srcObject = stream;
+            video.play().catch(console.error);
+          }
         }
-      });
+      );
     };
 
     const attachRemoteStream = (stream: MediaStream) => {
-      [remoteVideoMobile.current, remoteVideoDesktop.current].forEach((video) => {
-        if (video) {
-          video.srcObject = stream;
-          video.play().catch(console.error);
+      [remoteVideoMobile.current, remoteVideoDesktop.current].forEach(
+        (video) => {
+          if (video) {
+            video.srcObject = stream;
+            video.play().catch(console.error);
+          }
         }
-      });
+      );
     };
 
-    (async () => {
+    const start = async () => {
       const banned = await checkBan();
       if (banned) return;
 
@@ -119,9 +123,7 @@ const lastRemoteTrackTime = useRef(Date.now());
 
       const socket = io(
         process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000',
-        {
-          transports: ['websocket'],
-        }
+        { transports: ['websocket'] }
       );
 
       socketRef.current = socket;
@@ -130,203 +132,211 @@ const lastRemoteTrackTime = useRef(Date.now());
         setOnline(count);
       });
 
-      navigator.mediaDevices
-        .getUserMedia({
-          video: {
-            facingMode: cameraMode,
+      socket.on('signal', ({ signal }) => {
+        peerRef.current?.signal(signal);
+      });
+
+      socket.on('chat-message', ({ message }) => {
+        messageSound.current?.play().catch(() => {});
+        setTyping(false);
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: message,
+            mine: false,
           },
-          audio: true,
-        })
-        .then((stream) => {
-          streamRef.current = stream;
-          attachLocalStream(stream);
+        ]);
+      });
 
-          socket.emit('find-partner', {
-            gender,
-            country,
-          });
+      socket.on('reaction', ({ emoji }) => {
+        setReaction(emoji);
 
-          socket.on('matched', ({ partnerId, initiator, partner }) => {
-            setPartnerInfo(partner || null);
-            setConnecting(false);
-            peerRef.current?.destroy();
+        setTimeout(() => {
+          setReaction('');
+        }, 1800);
+      });
 
-            const peer = new Peer({
-              initiator,
-              trickle: true,
-              stream,
-              config: {
-                iceServers: [
-                  {
-                    urls: 'stun:global.stun.twilio.com:3478',
-                  },
-                  {
-                    urls: 'turn:global.relay.metered.ca:80',
-                    username: 'admchatmia@outlook.com',
-                    credential: 'Osorno69#',
-                  },
-                ],
-              },
-            });
+      socket.on('typing', () => {
+        setTyping(true);
+        clearTimeout(typingTimeout.current);
 
-            peer.on('signal', (signal) => {
-              socket.emit('signal', {
-                to: partnerId,
-                signal,
-              });
-            });
+        typingTimeout.current = setTimeout(() => {
+          setTyping(false);
+        }, 1500);
+      });
 
-            peer.on('connect', () => {
-              if (!hasTrackedConnection.current) {
-                hasTrackedConnection.current = true;
+      socket.on('partner-left', () => {
+        hasTrackedConnection.current = false;
+        setPartnerInfo(null);
+        setRemoteReady(false);
 
-                trackEvent('chat_connected', {
-                  country: country.name,
-                });
-              }
+        cleanupRemote();
 
-              matchSound.current?.play().catch(() => {});
-              setConnecting(false);
-              setConnected(true);
-              statsInterval.current = setInterval(async () => {
-                try {
-                  const pc = (peer as any)._pc;
-              
-                  if (!pc) return;
-              
-                  const stats = await pc.getStats();
-              
-                  let rtt = 0;
-              
-                  stats.forEach((report: any) => {
-                    if (
-                      report.type === 'candidate-pair' &&
-                      report.state === 'succeeded'
-                    ) {
-                      rtt =
-                        report.currentRoundTripTime || 0;
-                    }
-                  });
-              
-                  if (rtt < 0.15) {
-                    setConnectionQuality('excellent');
-                  } else if (rtt < 0.35) {
-                    setConnectionQuality('medium');
-                  } else {
-                    setConnectionQuality('bad');
-                  }
-                } catch (err) {
-                  console.error(err);
-                }
-              }, 5000);
-            });
+        setTyping(false);
+        setMessages([]);
+        setConnected(false);
+        setConnecting(true);
 
-            peer.on('stream', (remoteStream) => {
-              attachRemoteStream(remoteStream);
-              lastRemoteTrackTime.current = Date.now();
-
-remoteStream.getTracks().forEach((track) => {
-  track.onmute = () => {
-    console.log('REMOTE TRACK MUTED');
-  };
-
-  track.onunmute = () => {
-    lastRemoteTrackTime.current = Date.now();
-  };
-});
-              setConnecting(false);
-              setConnected(true);
-            });
-
-            peer.on('error', () => {
-              setConnected(false);
-              setConnecting(true);
-            
-              setTimeout(() => {
-                next();
-              }, 800);
-            });
-            
-            peer.on('close', () => {
-              setConnected(false);
-              setConnecting(true);
-            
-              setTimeout(() => {
-                next();
-              }, 800);
-            });
-            remoteStreamTimeout.current = setInterval(() => {
-              const secondsWithoutMedia =
-                (Date.now() - lastRemoteTrackTime.current) / 1000;
-            
-              if (
-                connected &&
-                secondsWithoutMedia > 15
-              ) {
-                console.log('BLACK SCREEN DETECTED');
-            
-                clearInterval(remoteStreamTimeout.current);
-            
-                next();
-              }
-            }, 5000);
-            peerRef.current = peer;
-          });
-
-          socket.on('signal', ({ signal }) => {
-            peerRef.current?.signal(signal);
-          });
-
-          socket.on('chat-message', ({ message }) => {
-            messageSound.current?.play().catch(() => {});
-            setTyping(false);
-
-            setMessages((prev) => [
-              ...prev,
-              {
-                text: message,
-                mine: false,
-              },
-            ]);
-          });
-
-          socket.on('typing', () => {
-            setTyping(true);
-            clearTimeout(typingTimeout.current);
-
-            typingTimeout.current = setTimeout(() => {
-              setTyping(false);
-            }, 1500);
-          });
-
-          socket.on('partner-left', () => {
-            hasTrackedConnection.current = false;
-            setPartnerInfo(null);
-            cleanupRemote();
-
-            setTyping(false);
-            setMessages([]);
-            setConnected(false);
-            setConnecting(true);
-
-            socket.emit('find-partner', {
-              gender,
-              country,
-            });
-          });
-        })
-        .catch(() => {
-          alert('Debes permitir cámara y micrófono para usar ChatMia.');
-          setConnecting(false);
-          setConnected(false);
+        socket.emit('find-partner', {
+          gender,
+          country,
         });
-    })();
+      });
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: cameraMode,
+        },
+        audio: true,
+      });
+
+      streamRef.current = stream;
+      attachLocalStream(stream);
+
+      socket.emit('find-partner', {
+        gender,
+        country,
+      });
+
+      socket.on('matched', ({ partnerId, initiator, partner }) => {
+        setPartnerInfo(partner || null);
+        setRemoteReady(false);
+        setConnecting(false);
+
+        peerRef.current?.destroy();
+
+        const peer = new Peer({
+          initiator,
+          trickle: true,
+          stream,
+          config: {
+            iceServers: [
+              {
+                urls: 'stun:global.stun.twilio.com:3478',
+              },
+              {
+                urls: 'turn:global.relay.metered.ca:80',
+                username: 'admchatmia@outlook.com',
+                credential: 'Osorno69#',
+              },
+            ],
+          },
+        });
+
+        peer.on('signal', (signal) => {
+          socket.emit('signal', {
+            to: partnerId,
+            signal,
+          });
+        });
+
+        peer.on('connect', () => {
+          if (!hasTrackedConnection.current) {
+            hasTrackedConnection.current = true;
+
+            trackEvent('chat_connected', {
+              country: country.name,
+            });
+          }
+
+          matchSound.current?.play().catch(() => {});
+          setConnecting(false);
+          setConnected(true);
+
+          clearInterval(statsInterval.current);
+
+          statsInterval.current = setInterval(async () => {
+            try {
+              const pc = (peer as any)._pc;
+              if (!pc) return;
+
+              const stats = await pc.getStats();
+              let rtt = 0;
+
+              stats.forEach((report: any) => {
+                if (
+                  report.type === 'candidate-pair' &&
+                  report.state === 'succeeded'
+                ) {
+                  rtt = report.currentRoundTripTime || 0;
+                }
+              });
+
+              if (rtt < 0.15) {
+                setConnectionQuality('excellent');
+              } else if (rtt < 0.35) {
+                setConnectionQuality('medium');
+              } else {
+                setConnectionQuality('bad');
+              }
+            } catch (error) {
+              console.error(error);
+            }
+          }, 5000);
+        });
+
+        peer.on('stream', (remoteStream) => {
+          setRemoteReady(true);
+          attachRemoteStream(remoteStream);
+
+          lastRemoteTrackTime.current = Date.now();
+
+          remoteStream.getTracks().forEach((track) => {
+            track.onunmute = () => {
+              lastRemoteTrackTime.current = Date.now();
+            };
+          });
+
+          setConnecting(false);
+          setConnected(true);
+        });
+
+        peer.on('error', () => {
+          setConnected(false);
+          setConnecting(true);
+
+          setTimeout(() => {
+            next();
+          }, 800);
+        });
+
+        peer.on('close', () => {
+          setConnected(false);
+          setConnecting(true);
+
+          setTimeout(() => {
+            next();
+          }, 800);
+        });
+
+        clearInterval(remoteStreamTimeout.current);
+
+        remoteStreamTimeout.current = setInterval(() => {
+          const secondsWithoutMedia =
+            (Date.now() - lastRemoteTrackTime.current) / 1000;
+
+          if (secondsWithoutMedia > 15) {
+            clearInterval(remoteStreamTimeout.current);
+            next();
+          }
+        }, 5000);
+
+        peerRef.current = peer;
+      });
+    };
+
+    start().catch(() => {
+      alert('Debes permitir cámara y micrófono para usar ChatMia.');
+      setConnecting(false);
+      setConnected(false);
+    });
 
     return () => {
       clearInterval(statsInterval.current);
       clearInterval(remoteStreamTimeout.current);
-      cleanupAll();
       clearTimeout(typingTimeout.current);
+      cleanupAll();
       socketRef.current?.disconnect();
     };
   }, [gender, country, cameraMode]);
@@ -335,11 +345,16 @@ remoteStream.getTracks().forEach((track) => {
     peerRef.current?.destroy();
     peerRef.current = null;
 
-    [remoteVideoMobile.current, remoteVideoDesktop.current].forEach((video) => {
-      if (video) {
-        video.srcObject = null;
+    [remoteVideoMobile.current, remoteVideoDesktop.current].forEach(
+      (video) => {
+        if (video) {
+          video.srcObject = null;
+        }
       }
-    });
+    );
+
+    clearInterval(statsInterval.current);
+    clearInterval(remoteStreamTimeout.current);
   };
 
   const cleanupAll = () => {
@@ -353,34 +368,35 @@ remoteStream.getTracks().forEach((track) => {
   };
 
   const next = () => {
+    setRemoteReady(false);
     hasTrackedConnection.current = false;
     setPartnerInfo(null);
-  
     setTransitioning(true);
-  
+
     trackEvent('next_clicked');
-  
+
     cleanupRemote();
-  
+
     setTyping(false);
     setMessages([]);
     setConnected(false);
-  
+
     setTimeout(() => {
       setConnecting(true);
-  
+
       socketRef.current?.emit('next');
-  
+
       setTimeout(() => {
         socketRef.current?.emit('find-partner', {
           gender,
           country,
         });
-  
+
         setTransitioning(false);
       }, 400);
     }, 250);
   };
+
   const toggleMic = () => {
     const audioTrack = streamRef.current?.getAudioTracks()[0];
 
@@ -403,60 +419,48 @@ remoteStream.getTracks().forEach((track) => {
 
   const switchCamera = async () => {
     try {
-      const currentTrack =
-        streamRef.current?.getVideoTracks()[0];
-  
-      const currentFacingMode =
-        currentTrack?.getSettings()?.facingMode;
-  
+      const currentTrack = streamRef.current?.getVideoTracks()[0];
+
+      const currentFacingMode = currentTrack?.getSettings()?.facingMode;
+
       const newMode =
-        currentFacingMode === 'environment'
-          ? 'user'
-          : 'environment';
-  
-      const newStream =
-        await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: newMode,
-          },
-          audio: true,
-        });
-  
-      const newVideoTrack =
-        newStream.getVideoTracks()[0];
-  
-      const oldVideoTrack =
-        streamRef.current?.getVideoTracks()[0];
-  
-      if (
-        peerRef.current &&
-        oldVideoTrack &&
-        newVideoTrack
-      ) {
+        currentFacingMode === 'environment' ? 'user' : 'environment';
+
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: newMode,
+        },
+        audio: true,
+      });
+
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      const oldVideoTrack = streamRef.current?.getVideoTracks()[0];
+
+      if (peerRef.current && oldVideoTrack && newVideoTrack) {
         peerRef.current.replaceTrack(
           oldVideoTrack,
           newVideoTrack,
           streamRef.current as MediaStream
         );
       }
-  
+
       oldVideoTrack?.stop();
-  
-      if (streamRef.current) {
-        streamRef.current.removeTrack(oldVideoTrack!);
+
+      if (streamRef.current && oldVideoTrack) {
+        streamRef.current.removeTrack(oldVideoTrack);
         streamRef.current.addTrack(newVideoTrack);
       }
-  
-      [
-        localVideoMobile.current,
-        localVideoDesktop.current,
-      ].forEach((video) => {
-        if (video) {
-          video.srcObject = streamRef.current;
+
+      [localVideoMobile.current, localVideoDesktop.current].forEach(
+        (video) => {
+          if (video) {
+            video.srcObject = streamRef.current;
+            video.play().catch(console.error);
+          }
         }
-      });
-    } catch (err) {
-      console.error(err);
+      );
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -498,8 +502,8 @@ remoteStream.getTracks().forEach((track) => {
     return bannedWords.some((word) => normalized.includes(word));
   };
 
-  const getGenderIcon = (gender?: string) => {
-    switch (gender) {
+  const getGenderIcon = (value?: string) => {
+    switch (value) {
       case 'male':
         return '👨';
       case 'female':
@@ -544,69 +548,93 @@ remoteStream.getTracks().forEach((track) => {
     setMessage('');
   };
 
+  const sendReaction = (emoji: string) => {
+    setReaction(emoji);
+
+    socketRef.current?.emit('reaction', {
+      emoji,
+    });
+
+    setTimeout(() => {
+      setReaction('');
+    }, 1800);
+  };
+
   const partnerLabel = (
     <>
-      {partnerInfo?.flag || '🌎'}{' '}
-      {getGenderIcon(partnerInfo?.gender)}{' '}
+      {partnerInfo?.flag || '🌎'} {getGenderIcon(partnerInfo?.gender)}{' '}
       {partnerInfo?.country || 'Sin país'}
     </>
   );
 
+  const reactionOverlay = reaction ? (
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+      <div className="text-7xl animate-bounce drop-shadow-2xl">
+        {reaction}
+      </div>
+    </div>
+  ) : null;
+
+  const remoteLoading = !remoteReady ? (
+    <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-10">
+      <div className="text-sm text-white/60 animate-pulse">
+        Conectando video...
+      </div>
+    </div>
+  ) : null;
+
   return (
     <main className="relative h-[100dvh] bg-black text-white flex flex-col overflow-hidden">
-    <AnimatePresence>
-  {connecting && (
-    <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center">
-      <div className="text-center">
-        <div className="text-xl font-semibold animate-pulse">
-          Buscando a alguien...
-        </div>
+      <AnimatePresence>
+        {connecting && (
+          <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-xl font-semibold animate-pulse">
+                Buscando a alguien...
+              </div>
 
-        <div className="text-sm text-white/40 mt-2">
-          Conectando alrededor del mundo
-        </div>
-      </div>
-    </div>
-  )}
+              <div className="text-sm text-white/40 mt-2">
+                Conectando alrededor del mundo
+              </div>
+            </div>
+          </div>
+        )}
 
-  {transitioning && (
-    <div className="absolute inset-0 z-50 bg-black flex items-center justify-center">
-      <div className="text-center space-y-4">
-        <div className="w-16 h-16 rounded-full border-4 border-white/20 border-t-white animate-spin mx-auto" />
+        {transitioning && (
+          <div className="absolute inset-0 z-50 bg-black flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 rounded-full border-4 border-white/20 border-t-white animate-spin mx-auto" />
 
-        <div className="text-white/70 text-sm tracking-wide">
-          Conectando siguiente persona...
-        </div>
-      </div>
-    </div>
-  )}
-</AnimatePresence>
+              <div className="text-white/70 text-sm tracking-wide">
+                Conectando siguiente persona...
+              </div>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <header className="h-14 shrink-0 border-b border-white/10 bg-black flex items-center justify-between px-4">
-        <div className="font-semibold text-sm md:text-base">
-          ChatMia
-        </div>
+        <div className="font-semibold text-sm md:text-base">ChatMia</div>
 
         <div className="flex items-center gap-2 text-xs">
           <span>{country.flag}</span>
 
-          <span className="text-white/60">
-            {online} online
-            <span
-  className={`px-2 py-1 rounded-full text-[10px] ${
-    connectionQuality === 'excellent'
-      ? 'bg-green-500/20 text-green-300'
-      : connectionQuality === 'medium'
-      ? 'bg-yellow-500/20 text-yellow-300'
-      : 'bg-red-500/20 text-red-300'
-  }`}
->
-  {connectionQuality === 'excellent'
-    ? '🟢 Excelente'
-    : connectionQuality === 'medium'
-    ? '🟡 Media'
-    : '🔴 Mala'}
-</span>
+          <span className="text-white/60">{online} online</span>
+
+          <span
+            className={`px-2 py-1 rounded-full text-[10px] ${
+              connectionQuality === 'excellent'
+                ? 'bg-green-500/20 text-green-300'
+                : connectionQuality === 'medium'
+                ? 'bg-yellow-500/20 text-yellow-300'
+                : 'bg-red-500/20 text-red-300'
+            }`}
+          >
+            {connectionQuality === 'excellent'
+              ? '🟢 Excelente'
+              : connectionQuality === 'medium'
+              ? '🟡 Media'
+              : '🔴 Mala'}
           </span>
 
           <span
@@ -624,16 +652,19 @@ remoteStream.getTracks().forEach((track) => {
       <section className="flex-1 min-h-0 overflow-hidden">
         <div className="flex lg:hidden flex-col h-full">
           <div className="relative flex-1 min-h-0 border-b border-white/10 bg-black">
-          <video
-  ref={remoteVideoDesktop}
-  autoPlay
-  playsInline
-  muted={false}
-  controls={false}
-  disablePictureInPicture
-  controlsList="nodownload nofullscreen noremoteplayback"
-  className="w-full h-full object-cover transition-opacity duration-300"
-/>
+            {remoteLoading}
+            {reactionOverlay}
+
+            <video
+              ref={remoteVideoMobile}
+              autoPlay
+              playsInline
+              muted={false}
+              controls={false}
+              disablePictureInPicture
+              controlsList="nodownload nofullscreen noremoteplayback"
+              className="w-full h-full object-cover transition-opacity duration-300"
+            />
 
             <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs backdrop-blur-md">
               {partnerLabel}
@@ -684,12 +715,13 @@ remoteStream.getTracks().forEach((track) => {
               >
                 {cameraEnabled ? '📷' : '🚫'}
               </button>
+
               <button
-  onClick={switchCamera}
-  className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-lg"
->
-  🔄
-</button>
+                onClick={switchCamera}
+                className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-lg"
+              >
+                🔄
+              </button>
             </div>
 
             <div className="absolute bottom-3 left-3 right-3 space-y-2">
@@ -737,6 +769,18 @@ remoteStream.getTracks().forEach((track) => {
                   Enviar
                 </button>
               </div>
+
+              <div className="flex gap-2 overflow-x-auto">
+                {['❤️', '🔥', '😂', '👋', '😍'].map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => sendReaction(emoji)}
+                    className="w-11 h-11 shrink-0 rounded-full bg-black/60 backdrop-blur-md text-xl"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -758,16 +802,19 @@ remoteStream.getTracks().forEach((track) => {
           </div>
 
           <div className="relative min-w-0 h-full rounded-3xl overflow-hidden border border-white/10 bg-black">
-          <video
-  ref={remoteVideoDesktop}
-  autoPlay
-  playsInline
-  muted={false}
-  controls={false}
-  disablePictureInPicture
-  controlsList="nodownload nofullscreen noremoteplayback"
-  className="w-full h-full object-cover transition-opacity duration-300"
-/>
+            {remoteLoading}
+            {reactionOverlay}
+
+            <video
+              ref={remoteVideoDesktop}
+              autoPlay
+              playsInline
+              muted={false}
+              controls={false}
+              disablePictureInPicture
+              controlsList="nodownload nofullscreen noremoteplayback"
+              className="w-full h-full object-cover transition-opacity duration-300"
+            />
 
             <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs">
               {partnerLabel}
@@ -790,9 +837,7 @@ remoteStream.getTracks().forEach((track) => {
               ))}
 
               {typing && (
-                <div className="text-xs text-white/50">
-                  Escribiendo...
-                </div>
+                <div className="text-xs text-white/50">Escribiendo...</div>
               )}
             </div>
 
@@ -820,6 +865,18 @@ remoteStream.getTracks().forEach((track) => {
               </button>
             </div>
 
+            <div className="flex gap-2 px-3 pb-3">
+              {['❤️', '🔥', '😂', '👋', '😍'].map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => sendReaction(emoji)}
+                  className="w-10 h-10 rounded-full bg-white/10 border border-white/10 text-lg"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
             <div className="p-3 border-t border-white/10 flex gap-2 flex-wrap">
               <button
                 onClick={toggleMic}
@@ -833,6 +890,13 @@ remoteStream.getTracks().forEach((track) => {
                 className="px-4 py-2 rounded-full bg-white/10 border border-white/10"
               >
                 {cameraEnabled ? 'Apagar cámara' : 'Encender cámara'}
+              </button>
+
+              <button
+                onClick={switchCamera}
+                className="px-4 py-2 rounded-full bg-white/10 border border-white/10"
+              >
+                Girar cámara
               </button>
 
               <button
