@@ -515,14 +515,16 @@ export default function VideoChat({
       <section className="flex-1 min-h-0 overflow-hidden">
         <div className="flex lg:hidden flex-col h-full">
           <div className="relative flex-1 min-h-0 border-b border-white/10 bg-black">
-            <video
-              ref={remoteVideoMobile}
-              autoPlay
-              playsInline
-              muted={false}
-              controls={false}
-              className="w-full h-full object-cover"
-            />
+          <video
+  ref={remoteVideoDesktop}
+  autoPlay
+  playsInline
+  muted={false}
+  controls={false}
+  disablePictureInPicture
+  controlsList="nodownload nofullscreen noremoteplayback"
+  className="w-full h-full object-cover"
+/>
 
             <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs backdrop-blur-md">
               {partnerLabel}
@@ -647,13 +649,16 @@ export default function VideoChat({
           </div>
 
           <div className="relative min-w-0 h-full rounded-3xl overflow-hidden border border-white/10 bg-black">
-            <video
-              ref={remoteVideoDesktop}
-              autoPlay
-              playsInline
-              controls={false}
-              className="w-full h-full object-cover"
-            />
+          <video
+  ref={remoteVideoDesktop}
+  autoPlay
+  playsInline
+  muted={false}
+  controls={false}
+  disablePictureInPicture
+  controlsList="nodownload nofullscreen noremoteplayback"
+  className="w-full h-full object-cover"
+/>
 
             <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs">
               {partnerLabel}
