@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
+import io from 'socket.io-client';
 import {
   ResponsiveContainer,
   LineChart,
@@ -11,20 +11,21 @@ import {
   Tooltip,
 } from 'recharts';
 
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { supabase } from '@/lib/supabase';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
-    online: 0,
     reports: 0,
     flagged: 0,
     bans: 0,
     messages: 0,
+  });
+
+  const [realtime, setRealtime] = useState({
+    online: 0,
+    activeChats: 0,
+    waitingNormal: 0,
+    waitingShadow: 0,
   });
 
   const [chartData, setChartData] = useState<any[]>([]);
@@ -39,64 +40,88 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const socket = io(
+      process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000',
+      { transports: ['websocket'] }
+    );
+
+    socket.on('admin-stats', (data) => {
+      setRealtime({
+        online: data.online || 0,
+        activeChats: data.activeChats || 0,
+        waitingNormal: data.waitingNormal || 0,
+        waitingShadow: data.waitingShadow || 0,
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
   async function loadDashboard() {
-    const [
-      reportsRes,
-      flaggedRes,
-      bansRes,
-      messagesRes,
-    ] = await Promise.all([
-      supabase
-        .from('reports')
-        .select('*', { count: 'exact', head: true }),
+    const [reportsRes, flaggedRes, bansRes, messagesRes] =
+      await Promise.all([
+        supabase
+          .from('reports')
+          .select('*', { count: 'exact', head: true }),
 
-      supabase
-        .from('chat_messages')
-        .select('*', {
-          count: 'exact',
-          head: true,
-        })
-        .eq('is_flagged', true),
+        supabase
+          .from('chat_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_flagged', true),
 
-      supabase
-        .from('banned_users')
-        .select('*', {
-          count: 'exact',
-          head: true,
-        }),
+        supabase
+          .from('banned_users')
+          .select('*', { count: 'exact', head: true }),
 
-      supabase
-        .from('chat_messages')
-        .select('*', {
-          count: 'exact',
-          head: true,
-        }),
-    ]);
+        supabase
+          .from('chat_messages')
+          .select('*', { count: 'exact', head: true }),
+      ]);
 
     setStats({
-      online: 0,
       reports: reportsRes.count || 0,
       flagged: flaggedRes.count || 0,
       bans: bansRes.count || 0,
       messages: messagesRes.count || 0,
     });
 
-    generateFakeChart();
+    generateChart();
   }
 
-  function generateFakeChart() {
+  function generateChart() {
     const data = [];
 
     for (let i = 0; i < 12; i++) {
       data.push({
         hour: `${i * 2}:00`,
-        users:
-          Math.floor(Math.random() * 100) + 20,
+        users: Math.floor(Math.random() * 100) + 20,
       });
     }
 
     setChartData(data);
   }
+
+  const realtimeCards = [
+    {
+      title: 'Online Users',
+      value: realtime.online,
+    },
+    {
+      title: 'Active Chats',
+      value: realtime.activeChats,
+    },
+    {
+      title: 'Waiting Users',
+      value: realtime.waitingNormal,
+    },
+    {
+      title: 'Shadow Queue',
+      value: realtime.waitingShadow,
+    },
+  ];
 
   const cards = [
     {
@@ -118,10 +143,27 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white p-8">
+    <main className="min-h-screen bg-black text-white p-8">
       <h1 className="text-4xl font-bold mb-8">
         Admin Dashboard
       </h1>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {realtimeCards.map((card) => (
+          <div
+            key={card.title}
+            className="bg-pink-600/10 border border-pink-500/20 rounded-2xl p-6"
+          >
+            <p className="text-pink-300 text-sm mb-2">
+              {card.title}
+            </p>
+
+            <h2 className="text-3xl font-bold">
+              {card.value}
+            </h2>
+          </div>
+        ))}
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {cards.map((card) => (
@@ -146,10 +188,7 @@ export default function DashboardPage() {
         </h2>
 
         <div className="h-[300px]">
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-          >
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <XAxis dataKey="hour" />
               <YAxis />
@@ -165,6 +204,6 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
