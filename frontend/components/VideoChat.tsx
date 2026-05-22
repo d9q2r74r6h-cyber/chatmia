@@ -161,14 +161,23 @@ const reconnectTimeout = useRef<any>(null);
 
       socket.on('typing', () => {
         setTyping(true);
+      
         clearTimeout(typingTimeout.current);
-
+      
         typingTimeout.current = setTimeout(() => {
           setTyping(false);
         }, 1500);
       });
+      
+      socket.on('rate-limited', (data) => {
+        alert(data.reason);
+      });
+      
+      socket.on('next-blocked', (data) => {
+        alert(data.reason);
+      });
 
-      socket.on('partner-left', () => {
+      socket.on('partner-left', async () => {
         hasTrackedConnection.current = false;
         setPartnerInfo(null);
         setRemoteReady(false);
@@ -180,9 +189,15 @@ const reconnectTimeout = useRef<any>(null);
         setConnected(false);
         setConnecting(true);
 
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        
         socket.emit('find-partner', {
           gender,
           country,
+          email: user?.email || null,
+          userId: user?.id || null,
         });
       });
 
@@ -196,9 +211,15 @@ const reconnectTimeout = useRef<any>(null);
       streamRef.current = stream;
       attachLocalStream(stream);
 
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      
       socket.emit('find-partner', {
         gender,
         country,
+        email: user?.email || null,
+        userId: user?.id || null,
       });
 
       socket.on('matched', ({ partnerId, initiator, partner }) => {
@@ -372,7 +393,7 @@ const reconnectTimeout = useRef<any>(null);
     streamRef.current = null;
   };
 
-  const next = () => {
+  const next = async () => {
     isManualNext.current = true;
 clearTimeout(reconnectTimeout.current);
     setRemoteReady(false);
