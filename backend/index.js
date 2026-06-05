@@ -320,7 +320,7 @@ if (msgData.count > 8) {
   
     // enviar mensaje al otro usuario
     partnerSocket?.emit('message', {
-      text,
+      text: message,
       from: socket.id,
     });
   
