@@ -36,7 +36,8 @@ const io = new Server(server, {
   },
 });
 
-let waitingSocketId = null;
+let waitingNormal = null;
+let waitingShadow = null;
 
 const partners = new Map();
 const users = new Map();
@@ -59,6 +60,62 @@ function emitOnlineCount() {
   io.emit('online-count', io.engine.clientsCount);
 }
 
+function emitAdminStats() {
+
+  io.emit('admin-stats', {
+    online: io.engine.clientsCount,
+    waitingNormal:
+      waitingNormal ? 1 : 0,
+    waitingShadow:
+      waitingShadow ? 1 : 0,
+    activeChats:
+      partners.size / 2,
+  });
+
+}
+
+async function saveVisit(socket, data = {}) {
+  if (!supabase) return;
+
+  await supabase.from('visits').insert({
+    socket_id: socket.id,
+    email: data.email || null,
+    gender: data.gender || null,
+    country: data.country || null,
+    flag: data.flag || '',
+    user_agent:
+      socket.handshake.headers['user-agent'] || null,
+  });
+}
+
+async function markVisitMatched(socketId) {
+  if (!supabase) return;
+
+  await supabase
+    .from('visits')
+    .update({ matched: true })
+    .eq('socket_id', socketId)
+    .is('disconnected_at', null);
+}
+
+async function markVisitDisconnected(socketId) {
+  if (!supabase) return;
+
+  await supabase
+    .from('visits')
+    .update({ disconnected_at: new Date().toISOString() })
+    .eq('socket_id', socketId)
+    .is('disconnected_at', null);
+}
+
+  await supabase.from('analytics_snapshots').insert({
+    online_users: io.engine.clientsCount,
+    active_chats: partners.size / 2,
+    waiting_users: waitingNormal ? 1 : 0,
+    shadow_queue: waitingShadow ? 1 : 0,
+  });
+}
+
 function containsBannedWord(text) {
   const normalized = text.toLowerCase();
 
@@ -68,9 +125,15 @@ function containsBannedWord(text) {
 }
 
 function removeWaiting(socketId) {
-  if (waitingSocketId === socketId) {
-    waitingSocketId = null;
+
+  if (waitingNormal === socketId) {
+    waitingNormal = null;
   }
+
+  if (waitingShadow === socketId) {
+    waitingShadow = null;
+  }
+
 }
 
 function disconnectPair(socketId) {
@@ -87,112 +150,193 @@ function disconnectPair(socketId) {
 io.on('connection', (socket) => {
   console.log('CONNECTED:', socket.id);
 
-  emitOnlineCount();
+  emitOnlineCount();  
+  emitAdminStats();
 
-  socket.on('find-partner', ({ gender, country, email }) => {
-    console.log('FIND:', socket.id, gender, country?.code);
-
-    users.set(socket.id, {
-      email: email || null,
-      gender: gender || null,
-      country: country?.name || country?.code || null,
-      flag: country?.flag || '',
-    });
-
-    removeWaiting(socket.id);
-    disconnectPair(socket.id);
-
-    if (waitingSocketId && waitingSocketId !== socket.id) {
-      const partnerId = waitingSocketId;
-      waitingSocketId = null;
-
-      partners.set(socket.id, partnerId);
-      partners.set(partnerId, socket.id);
-
-      console.log('MATCHED:', socket.id, partnerId);
-
-      socket.emit('matched', {
-        partnerId,
-        initiator: true,
-        partner: users.get(partnerId) || null,
+  socket.on(
+    'find-partner',
+    async ({ gender, country, email }) => {
+  
+      console.log(
+        'FIND:',
+        socket.id,
+        gender,
+        country?.code
+      );
+  
+      users.set(socket.id, {
+        email: email || null,
+        gender: gender || null,
+        country:
+          country?.name ||
+          country?.code ||
+          null,
+        flag: country?.flag || '',
       });
 
-      io.to(partnerId).emit('matched', {
-        partnerId: socket.id,
-        initiator: false,
-        partner: users.get(socket.id) || null,
+      await saveVisit(socket, {
+        email: email || null,
+        gender: gender || null,
+        country: country?.name || country?.code || null,
+        flag: country?.flag || '',
       });
+  
+      removeWaiting(socket.id);
+      disconnectPair(socket.id);
+  
+      let shadowBanned = false;
+  
+      if (supabase && email) {
+  
+        const { data: profile } =
+          await supabase
+            .from('profiles')
+            .select('shadow_banned')
+            .eq('email', email)
+            .single();
+  
+        shadowBanned =
+          profile?.shadow_banned || false;
+      }
+  
+      socket.shadowBanned = shadowBanned;
+  
+      const queueType = socket.shadowBanned
+        ? 'shadow'
+        : 'normal';
+  
+      let waitingQueue =
+        queueType === 'shadow'
+          ? waitingShadow
+          : waitingNormal;
+  
+      if (
+        waitingQueue &&
+        waitingQueue !== socket.id
+      ) {
+  
+        const partnerId = waitingQueue;
+  
+        if (queueType === 'shadow') {
+          waitingShadow = null;
+        } else {
+          waitingNormal = null;
+        }
+  
+        partners.set(socket.id, partnerId);
+  
+        partners.set(partnerId, socket.id);
+  
+        await markVisitMatched(socket.id);
+        await markVisitMatched(partnerId);
 
-      return;
+        console.log(
+          'MATCHED:',
+          socket.id,
+          partnerId
+        );
+
+        emitAdminStats();
+  
+        socket.emit('matched', {
+          partnerId,
+          initiator: true,
+          partner:
+            users.get(partnerId) || null,
+        });
+  
+        io.to(partnerId).emit('matched', {
+          partnerId: socket.id,
+          initiator: false,
+          partner:
+            users.get(socket.id) || null,
+        });
+  
+        return;
+      }
+  
+      if (queueType === 'shadow') {
+        waitingShadow = socket.id;
+      } else {
+        waitingNormal = socket.id;
+      }
+  
+      console.log(
+        'WAITING:',
+        socket.id,
+        queueType
+      );
     }
-
-    waitingSocketId = socket.id;
-
-    console.log('WAITING:', socket.id);
-  });
-
+  );
   socket.on('signal', ({ to, signal }) => {
     io.to(to).emit('signal', { signal });
   });
 
-  socket.on('chat-message', ({ message }) => {
+
+
+  
+  socket.on('chat-message', async ({ message }) => {
+
+    if (!partners.has(socket.id)) return;
+    if (message.length > 500) return;
+
     const now = Date.now();
 
-    const lastMessage =
-      messageRateLimit.get(socket.id) || 0;
+const msgData =
+  messageRateLimit.get(socket.id) || {
+    count: 0,
+    time: now,
+  };
 
-    if (now - lastMessage < 1000) return;
+if (now - msgData.time > 5000) {
+  msgData.count = 0;
+  msgData.time = now;
+}
 
-    messageRateLimit.set(socket.id, now);
+msgData.count++;
 
-    const partnerId = partners.get(socket.id);
+messageRateLimit.set(socket.id, msgData);
 
-    if (!partnerId || !message) return;
+if (msgData.count > 8) {
+  socket.emit('rate-limited', {
+    reason: 'Too many messages',
+  });
 
-    const cleanMessage = message.trim();
-
-    if (!cleanMessage) return;
-
-    if (cleanMessage.length > 300) return;
-
-    if (containsBannedWord(cleanMessage)) {
-      console.log(
-        'BLOCKED MESSAGE:',
-        socket.id,
-        cleanMessage
-      );
-
-      socket.emit('message-blocked');
-
-      return;
-    }
-
-    io.to(partnerId).emit('chat-message', {
-      message: cleanMessage,
+  return;
+}
+    const partnerSocketId = partners.get(socket.id);
+  
+    const partnerSocket = io.sockets.sockets.get(
+      partnerSocketId
+    );
+  
+    const lower = message.toLowerCase();
+  
+    const matchedWord = bannedWords.find(word =>
+      lower.includes(word)
+    );
+  
+    const flagged = !!matchedWord;
+  
+    // enviar mensaje al otro usuario
+    partnerSocket?.emit('message', {
+      text,
+      from: socket.id,
     });
-
+  
+    // guardar en Supabase
     if (supabase) {
-      supabase
+      await supabase
         .from('chat_messages')
         .insert({
-          chat_id: [socket.id, partnerId]
-            .sort()
-            .join('_'),
-
-          sender_socket: socket.id,
-          sender_email:
-            users.get(socket.id)?.email || null,
-          message: cleanMessage,
-        })
-        .then(({ error }) => {
-          if (error) {
-            console.error(
-              'CHAT MESSAGE INSERT ERROR:',
-              error
-            );
-          }
+          sender_id: users.get(socket.id)?.email || null,
+          receiver_id: users.get(partnerSocketId)?.email || null,
+          message: message,
+          is_flagged: flagged,
+          flag_reason: matchedWord || null,
         });
     }
+  
   });
 
   socket.on('reaction', ({ emoji }) => {
@@ -213,34 +357,80 @@ io.on('connection', (socket) => {
     io.to(partnerId).emit('typing');
   });
 
+
+
+
+
+  //////////////////////////////////////
   socket.on('next', () => {
+
     console.log('NEXT:', socket.id);
-
+  
     const now = Date.now();
-
+  
     const nextData =
       nextRateLimit.get(socket.id) || {
         count: 0,
         time: now,
+        cooldownUntil: 0,
       };
-
+  
+    // usuario en cooldown
+    if (now < nextData.cooldownUntil) {
+  
+      const secondsLeft = Math.ceil(
+        (nextData.cooldownUntil - now) / 1000
+      );
+  
+      socket.emit('next-blocked', {
+        reason: `Cooldown active (${secondsLeft}s)`,
+      });
+  
+      return;
+    }
+  
+    // reset ventana
     if (now - nextData.time > 10000) {
       nextData.count = 0;
       nextData.time = now;
     }
-
+  
     nextData.count++;
-
-    nextRateLimit.set(socket.id, nextData);
-
-    if (nextData.count > 5) return;
-
+  
+    // demasiado spam
+    if (nextData.count > 5) {
+  
+      nextData.cooldownUntil =
+        now + 30000;
+  
+      socket.emit('next-blocked', {
+        reason:
+          'Too many next requests. Cooldown 30s.',
+      });
+  
+      nextRateLimit.set(
+        socket.id,
+        nextData
+      );
+  
+      return;
+    }
+  
+    nextRateLimit.set(
+      socket.id,
+      nextData
+    );
+  
     removeWaiting(socket.id);
+  
     disconnectPair(socket.id);
+  
   });
 
   socket.on('disconnect', () => {
     console.log('DISCONNECTED:', socket.id);
+
+    await markVisitDisconnected(socket.id);
 
     removeWaiting(socket.id);
     disconnectPair(socket.id);
@@ -250,10 +440,15 @@ io.on('connection', (socket) => {
     nextRateLimit.delete(socket.id);
 
     emitOnlineCount();
+    emitAdminStats();
   });
 });
 
 const PORT = process.env.PORT || 4000;
+
+setInterval(() => {
+  saveAnalyticsSnapshot();
+}, 60000);
 
 server.listen(PORT, () => {
   console.log(`ChatMia server running on port ${PORT}`);

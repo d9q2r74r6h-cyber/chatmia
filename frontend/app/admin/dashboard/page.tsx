@@ -88,20 +88,33 @@ export default function DashboardPage() {
       messages: messagesRes.count || 0,
     });
 
-    generateChart();
+    await loadChartData();
   }
 
-  function generateChart() {
-    const data = [];
+  async function loadChartData() {
 
-    for (let i = 0; i < 12; i++) {
-      data.push({
-        hour: `${i * 2}:00`,
-        users: Math.floor(Math.random() * 100) + 20,
-      });
-    }
-
-    setChartData(data);
+    const { data } = await supabase
+      .from('analytics_snapshots')
+      .select('*')
+      .order('created_at', {
+        ascending: true,
+      })
+      .limit(24);
+  
+    if (!data) return;
+  
+    const formatted = data.map((item) => ({
+      hour: new Date(
+        item.created_at
+      ).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+  
+      users: item.online_users,
+    }));
+  
+    setChartData(formatted);
   }
 
   const realtimeCards = [
