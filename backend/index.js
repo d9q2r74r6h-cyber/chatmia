@@ -75,17 +75,34 @@ function emitAdminStats() {
 }
 
 async function saveVisit(socket, data = {}) {
-  if (!supabase) return;
 
-  await supabase.from('visits').insert({
-    socket_id: socket.id,
-    email: data.email || null,
-    gender: data.gender || null,
-    country: data.country || null,
-    flag: data.flag || '',
-    user_agent:
-      socket.handshake.headers['user-agent'] || null,
-  });
+  console.log('SAVE VISIT:', socket.id, data);
+
+  if (!supabase) {
+    console.log('NO SUPABASE');
+    return;
+  }
+
+  const { error } = await supabase
+    .from('visits')
+    .insert({
+      socket_id: socket.id,
+      email: data.email || null,
+      gender: data.gender || null,
+      country: data.country || null,
+      flag: data.flag || '',
+      user_agent:
+        socket.handshake.headers['user-agent'] || null,
+    });
+
+  if (error) {
+    console.log(
+      'SAVE VISIT ERROR:',
+      error.message
+    );
+  } else {
+    console.log('VISIT SAVED');
+  }
 }
 
 async function markVisitMatched(socketId) {
@@ -103,10 +120,15 @@ async function markVisitDisconnected(socketId) {
 
   await supabase
     .from('visits')
-    .update({ disconnected_at: new Date().toISOString() })
+    .update({
+      disconnected_at: new Date().toISOString(),
+    })
     .eq('socket_id', socketId)
     .is('disconnected_at', null);
 }
+
+async function saveAnalyticsSnapshot() {
+  if (!supabase) return;
 
   await supabase.from('analytics_snapshots').insert({
     online_users: io.engine.clientsCount,
@@ -114,14 +136,6 @@ async function markVisitDisconnected(socketId) {
     waiting_users: waitingNormal ? 1 : 0,
     shadow_queue: waitingShadow ? 1 : 0,
   });
-}
-
-function containsBannedWord(text) {
-  const normalized = text.toLowerCase();
-
-  return bannedWords.some((word) =>
-    normalized.includes(word)
-  );
 }
 
 function removeWaiting(socketId) {
@@ -427,7 +441,7 @@ if (msgData.count > 8) {
   
   });
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     console.log('DISCONNECTED:', socket.id);
 
     await markVisitDisconnected(socket.id);
