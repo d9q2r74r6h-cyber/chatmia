@@ -172,26 +172,29 @@ io.on('connection', (socket) => {
   emitOnlineCount();  
   emitAdminStats();
 
-  socket.on(
-    'find-partner',
-    async ({
-      gender,
-      country,
+  socket.on('find-partner', async ({
+    gender,
+    country,
+    email,
+    userId,
+    guestId,
+    isGuest,
+    region,
+    city,
+  }) => {
+    
+
+    await saveVisit(socket, {
       email,
-      userId,
       guestId,
       isGuest,
-    }) => {
-
-      await saveVisit(socket, {
-        email,
-        guestId,
-        isGuest,
-      
-        gender,
-        country: country?.name || null,
-        flag: country?.flag || '',
-      });
+    
+      gender,
+      country: country?.name || null,
+      flag: country?.flag || '',
+      region: region || null,
+      city: city || null,
+    });
       socket.isGuest = isGuest ?? !email;
       socket.guestId = guestId || null;
   
