@@ -83,23 +83,30 @@ async function saveVisit(socket, data = {}) {
     return;
   }
 
-  const { error } = await supabase
-    .from('visits')
-    .insert({
-      guest_id: data.guestId || null,
-    is_guest:
-    data.isGuest === undefined
-    ? !data.email
-    : data.isGuest,
-      socket_id: socket.id,
-      email: data.email || null,
-      gender: data.gender || null,
-      country: data.country || null,
-      flag: data.flag || '',
-      user_agent:
-        socket.handshake.headers['user-agent'] || null,
-    });
+  const { error } = await supabase.from('visits')
+  .insert({
+    guest_id: data.guestId || null,
 
+    is_guest:
+      data.isGuest === undefined
+        ? !data.email
+        : data.isGuest,
+
+    socket_id: socket.id,
+    email: data.email || null,
+
+    gender: data.gender || null,
+    country: data.country || null,
+    flag: data.flag || '',
+
+    region: data.region || null,
+    city: data.city || null,
+
+    user_agent:
+      socket.handshake.headers['user-agent'] || null,
+  });
+
+  
   if (error) {
     console.log(
       'SAVE VISIT ERROR:',
@@ -113,8 +120,9 @@ async function saveVisit(socket, data = {}) {
 async function markVisitMatched(socketId) {
   if (!supabase) return;
 
-  await supabase
-    .from('visits')
+  await supabase.auth.getUser();
+
+  await supabase.from('visits')
     .update({ matched: true })
     .eq('socket_id', socketId)
     .is('disconnected_at', null);
@@ -181,19 +189,21 @@ io.on('connection', (socket) => {
     isGuest,
     region,
     city,
+
   }) => {
     
 
     await saveVisit(socket, {
       email,
       guestId,
-      isGuest,
-    
+      isGuest,   
       gender,
       country: country?.name || null,
       flag: country?.flag || '',
       region: region || null,
       city: city || null,
+      userId: userId || null,
+
     });
       socket.isGuest = isGuest ?? !email;
       socket.guestId = guestId || null;
@@ -211,6 +221,7 @@ io.on('connection', (socket) => {
             .select('shadow_banned')
             .eq('email', email)
             .single();
+
   
         shadowBanned =
           profile?.shadow_banned || false;
