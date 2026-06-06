@@ -86,6 +86,11 @@ async function saveVisit(socket, data = {}) {
   const { error } = await supabase
     .from('visits')
     .insert({
+      guest_id: data.guestId || null,
+    is_guest:
+    data.isGuest === undefined
+    ? !data.email
+    : data.isGuest,
       socket_id: socket.id,
       email: data.email || null,
       gender: data.gender || null,
@@ -169,31 +174,26 @@ io.on('connection', (socket) => {
 
   socket.on(
     'find-partner',
-    async ({ gender, country, email }) => {
-  
-      console.log(
-        'FIND:',
-        socket.id,
-        gender,
-        country?.code
-      );
-  
-      users.set(socket.id, {
-        email: email || null,
-        gender: gender || null,
-        country:
-          country?.name ||
-          country?.code ||
-          null,
-        flag: country?.flag || '',
-      });
+    async ({
+      gender,
+      country,
+      email,
+      userId,
+      guestId,
+      isGuest,
+    }) => {
 
       await saveVisit(socket, {
-        email: email || null,
-        gender: gender || null,
-        country: country?.name || country?.code || null,
+        email,
+        guestId,
+        isGuest,
+      
+        gender,
+        country: country?.name || null,
         flag: country?.flag || '',
       });
+      socket.isGuest = isGuest ?? !email;
+      socket.guestId = guestId || null;
   
       removeWaiting(socket.id);
       disconnectPair(socket.id);
@@ -350,6 +350,15 @@ if (msgData.count > 8) {
           flag_reason: matchedWord || null,
         });
     }
+
+    await supabase
+      .from('visits')
+      .update({
+        messages_sent:
+          (users.get(socket.id)?.messagesSent || 0) + 1,
+      })
+      .eq('socket_id', socket.id)
+      .is('disconnected_at', null);
   
   });
 
