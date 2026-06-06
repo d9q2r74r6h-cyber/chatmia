@@ -17,6 +17,11 @@ type Props = {
   gender: string;
   country: Country;
   cameraMode: 'user' | 'environment';
+
+  email?: string | null;
+  guestId?: string | null;
+  isGuest?: boolean;
+
   onBack?: () => void;
 };
 
@@ -29,8 +34,14 @@ export default function VideoChat({
   gender,
   country,
   cameraMode,
+
+  email,
+  guestId,
+  isGuest,
+
   onBack,
-}: Props) {
+}: Props){
+
   const hasTrackedConnection = useRef(false);
   const isManualNext = useRef(false);
 const reconnectTimeout = useRef<any>(null);
@@ -194,11 +205,15 @@ const reconnectTimeout = useRef<any>(null);
         } = await supabase.auth.getUser();
         
         socket.emit('find-partner', {
-          gender,
-          country,
-          email: user?.email || null,
-          userId: user?.id || null,
-        });
+        gender,
+        country,
+
+        email: email || user?.email || null,
+        userId: user?.id || null,
+
+        guestId,
+        isGuest,
+      });
       });
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -218,8 +233,12 @@ const reconnectTimeout = useRef<any>(null);
       socket.emit('find-partner', {
         gender,
         country,
-        email: user?.email || null,
+      
+        email: email || user?.email || null,
         userId: user?.id || null,
+      
+        guestId,
+        isGuest,
       });
 
       socket.on('matched', ({ partnerId, initiator, partner }) => {
@@ -418,6 +437,10 @@ clearTimeout(reconnectTimeout.current);
         socketRef.current?.emit('find-partner', {
           gender,
           country,
+        
+          email,
+          guestId,
+          isGuest,
         });
 
         setTransitioning(false);

@@ -130,6 +130,17 @@ export default function Page() {
     window.location.href = '/auth';
   };
 
+  function getGuestId() {
+    let guestId = localStorage.getItem('chatmia_guest_id');
+  
+    if (!guestId) {
+      guestId = crypto.randomUUID();
+      localStorage.setItem('chatmia_guest_id', guestId);
+    }
+  
+    return guestId;
+  }
+
   const enterChat = (selectedGender: string) => {
     setEntering(true);
 
@@ -156,11 +167,14 @@ export default function Page() {
   if (gender) {
     return (
       <VideoChat
-        gender={gender}
-        country={country}
-        cameraMode={cameraMode}
-        onBack={() => setGender(null)}
-      />
+      gender={gender}
+      country={country}
+      cameraMode={cameraMode}
+      email={user?.email || null}
+      guestId={!user ? getGuestId() : null}
+      isGuest={!user}
+      onBack={() => setGender(null)}
+/>
     );
   }
 
