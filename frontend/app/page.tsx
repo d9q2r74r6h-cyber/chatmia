@@ -35,18 +35,6 @@ export default function Page() {
 
   useEffect(() => {
     checkUser();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_, session) => {
-      if (!session?.user) {
-        window.location.href = '/auth';
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, []);
 
   useEffect(() => {
@@ -92,7 +80,7 @@ export default function Page() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      window.location.href = '/auth';
+      setCheckingAuth(false);
       return;
     }
 
@@ -215,18 +203,21 @@ export default function Page() {
           </div>
 
           <div className="text-sm font-medium truncate">
-            {profile?.username || user?.email}
+          {profile?.username || user?.email || 'Invitado'}
           </div>
         </div>
 
-        <button
-          onClick={() => {
-            window.location.href = '/profile';
-          }}
-          className="h-11 px-5 rounded-2xl bg-white/10 border border-white/10 text-white font-semibold hover:bg-white/20 transition"
-        >
-          Perfil
-        </button>
+        {user && (
+              <button
+                onClick={() => {
+                  window.location.href = '/profile';
+                }}
+                className="h-11 px-5 rounded-2xl bg-white/10 border border-white/10 text-white font-semibold hover:bg-white/20 transition"
+              >
+                Perfil
+              </button>
+            )}
+      
         {profile?.role === 'admin' && (
   <Link
     href="/admin/dashboard"
@@ -235,12 +226,15 @@ export default function Page() {
     Admin
   </Link>
 )}
-        <button
-          onClick={logout}
-          className="h-11 px-5 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-300 font-semibold hover:bg-red-500/30 transition"
-        >
-          Salir
-        </button>
+        {user && (
+  <button
+    onClick={logout}
+    className="h-11 px-5 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-300 font-semibold hover:bg-red-500/30 transition"
+  >
+    Salir
+  </button>
+)}
+          
       </div>
 
       <div className="w-full max-w-xl">
