@@ -750,28 +750,28 @@ clearTimeout(reconnectTimeout.current);
               Tú
             </div>
 
-            <div className="absolute top-3 right-3 flex gap-2">
-              <button
-                onClick={toggleMic}
-                className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-lg"
-              >
-                {micEnabled ? '🎤' : '🔇'}
-              </button>
+            <div className="absolute top-3 right-3 flex gap-2 z-30">
+                <button
+                  onClick={toggleMic}
+                  className="w-10 h-10 rounded-full bg-black/60 border border-white/10 backdrop-blur-md flex items-center justify-center text-sm"
+                >
+                  {micEnabled ? '🎤' : '🔇'}
+                </button>
 
-              <button
-                onClick={toggleCamera}
-                className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-lg"
-              >
-                {cameraEnabled ? '📷' : '🚫'}
-              </button>
+                <button
+                  onClick={toggleCamera}
+                  className="w-10 h-10 rounded-full bg-black/60 border border-white/10 backdrop-blur-md flex items-center justify-center text-sm"
+                >
+                  {cameraEnabled ? '📷' : '🚫'}
+                </button>
 
-              <button
-                onClick={switchCamera}
-                className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-lg"
-              >
-                🔄
-              </button>
-               </div>
+                <button
+                  onClick={switchCamera}
+                  className="w-10 h-10 rounded-full bg-black/60 border border-white/10 backdrop-blur-md flex items-center justify-center text-sm"
+                >
+                  🔄
+                </button>
+              </div>
 
             <div className="absolute bottom-3 left-3 right-3 space-y-2">
               <div className="max-h-24 overflow-y-auto space-y-1">
@@ -833,18 +833,6 @@ clearTimeout(reconnectTimeout.current);
                 >
                   Reportar
                 </button>
-              </div>
-
-              <div className="flex gap-2 overflow-x-auto">
-                {['❤️', '🔥', '😂', '👋', '😍'].map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => sendReaction(emoji)}
-                    className="w-11 h-11 shrink-0 rounded-full bg-black/60 backdrop-blur-md text-xl"
-                  >
-                    {emoji}
-                  </button>
-                ))}
               </div>
             </div>
           </div>
