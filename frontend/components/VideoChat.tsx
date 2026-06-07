@@ -729,6 +729,21 @@ clearTimeout(reconnectTimeout.current);
               controlsList="nodownload nofullscreen noremoteplayback"
               className="w-full h-full object-cover transition-opacity duration-300"
             />
+            <div className="absolute top-3 right-3 flex gap-2 z-30">
+            <button
+              onClick={reportUser}
+              className="w-10 h-10 rounded-full bg-red-500/80 backdrop-blur-md flex items-center justify-center"
+            >
+              🚩
+            </button>
+
+            <button
+              onClick={next}
+              className="w-12 h-12 rounded-full bg-white text-black font-bold backdrop-blur-md flex items-center justify-center"
+            >
+              ▶
+            </button>
+          </div>
 
             <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs backdrop-blur-md">
               {partnerLabel}
@@ -819,21 +834,7 @@ clearTimeout(reconnectTimeout.current);
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={next}
-                  className="h-10 rounded-2xl bg-white/90 text-black text-sm font-semibold"
-                >
-                  Siguiente
-                </button>
-
-                <button
-                  onClick={reportUser}
-                  className="h-10 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-300 text-sm font-semibold"
-                >
-                  Reportar
-                </button>
-              </div>
+              
             </div>
           </div>
         </div>
