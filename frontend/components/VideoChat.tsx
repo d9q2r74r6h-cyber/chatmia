@@ -729,17 +729,6 @@ clearTimeout(reconnectTimeout.current);
               {partnerLabel}
             </div>
 
-            <div className="absolute top-3 right-3 flex gap-2">
-              
-
-              <button
-                onClick={reportUser}
-                className="px-5 py-2 rounded-full bg-red-500/20 border border-red-500/30 text-red-300 text-sm font-semibold backdrop-blur-md"
-              >
-                Reportar
-              </button>
-            </div>
-          </div>
 
           <div className="relative flex-1 min-h-0 bg-black">
             <video
@@ -776,32 +765,17 @@ clearTimeout(reconnectTimeout.current);
               >
                 🔄
               </button>
-              <div className="flex gap-2">
-  <button
-    onClick={next}
-    className="flex-1 h-12 rounded-2xl bg-white text-black font-semibold"
-  >
-    Siguiente
-  </button>
-
-  <button
-    onClick={reportUser}
-    className="flex-1 h-12 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-300 font-semibold"
-  >
-    Reportar
-  </button>
-</div>
-            </div>
+               </div>
 
             <div className="absolute bottom-3 left-3 right-3 space-y-2">
               <div className="max-h-24 overflow-y-auto space-y-1">
-                {messages.slice(-3).map((msg, index) => (
+              {messages.slice(-3).map((msg, index) => (
                   <div
                     key={`${msg.text}-${index}`}
-                    className={`text-xs px-3 py-2 rounded-2xl max-w-[80%] ${
+                    className={`text-xs px-3 py-2 rounded-2xl max-w-[65%] backdrop-blur-md border ${
                       msg.mine
-                        ? 'ml-auto bg-white text-black'
-                        : 'bg-black/60 text-white'
+                        ? 'ml-auto bg-pink-500/25 border-pink-300/20 text-white'
+                        : 'bg-black/35 border-white/10 text-white'
                     }`}
                   >
                     {msg.text}
@@ -836,6 +810,22 @@ clearTimeout(reconnectTimeout.current);
                   className="px-4 rounded-2xl bg-white text-black text-sm font-medium"
                 >
                   Enviar
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={next}
+                  className="h-10 rounded-2xl bg-white/90 text-black text-sm font-semibold"
+                >
+                  Siguiente
+                </button>
+
+                <button
+                  onClick={reportUser}
+                  className="h-10 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-300 text-sm font-semibold"
+                >
+                  Reportar
                 </button>
               </div>
 
@@ -975,12 +965,7 @@ clearTimeout(reconnectTimeout.current);
                 Siguiente
               </button>
 
-              <button
-                onClick={reportUser}
-                className="px-4 py-2 rounded-full bg-red-500/20 border border-red-500/30 text-red-300"
-              >
-                Reportar
-              </button>
+              
 
               {onBack && (
                 <button
