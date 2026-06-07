@@ -728,6 +728,7 @@ clearTimeout(reconnectTimeout.current);
             <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs backdrop-blur-md">
               {partnerLabel}
             </div>
+            </div>
 
 
           <div className="relative flex-1 min-h-0 bg-black">
