@@ -48,6 +48,35 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
+    const loadLocation = async () => {
+      try {
+        const response = await fetch('https://ipapi.co/json/');
+        const data = await response.json();
+  
+        console.log('LOCATION', data.city, data.region);
+  
+        setLocation({
+          region: data.region || '',
+          city: data.city || '',
+        });
+  
+        const detected = countries.find(
+          (item) => item.code === data.country_code
+        );
+  
+        if (detected) {
+          setCountry(detected);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+  
+    loadLocation();
+  }, []);
+
+  useEffect(() => {
+    
     if (checkingAuth || gender) return;
 
     const startPreview = async () => {
@@ -74,6 +103,10 @@ export default function Page() {
         console.error(error);
       }
     };
+
+      
+
+
 
     startPreview();
 
@@ -158,7 +191,20 @@ export default function Page() {
     return guestId;
   }
 
+  
   const enterChat = (selectedGender: string) => {
+    console.log('ENTRANDO AL CHAT CON:', {
+      country,
+      region: location.region,
+      city: location.city,
+    });
+
+    if (!country.name || !location.region || !location.city) {
+      alert('Estamos detectando tu ubicación. Intenta nuevamente en unos segundos.');
+      return;
+    }
+  
+  
     setEntering(true);
 
     previewStreamRef.current
@@ -180,6 +226,12 @@ export default function Page() {
       </main>
     );
   }
+
+  console.log('DATOS ANTES DE VIDEOCHAT', {
+    country,
+    region: location.region,
+    city: location.city,
+  });
 
   if (gender) {
     return (
