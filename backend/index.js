@@ -152,7 +152,7 @@ async function incrementarMatchCount(socketId) {
     nuevoTotal
   );
 
-  
+
   const { error } = await supabase
     .from('visits')
     .update({
@@ -257,18 +257,27 @@ io.on('connection', (socket) => {
     });
     
 
-    await saveVisit(socket, {
-      email,
-      guestId,
-      isGuest,   
-      gender,
-      country: country?.name || null,
-      flag: country?.flag || '',
-      region: region || null,
-      city: city || null,
-      userId: userId || null,
+    if (!socket.visitSaved) {
+  await saveVisit(socket, {
+    email,
+    guestId,
+    isGuest,
+    gender,
+    country: country?.name || null,
+    flag: country?.flag || '',
+    region: region || null,
+    city: city || null,
+    userId: userId || null,
+  });
 
-    });
+  socket.visitSaved = true;
+  console.log(
+    'VISITA INICIAL GUARDADA:',
+    socket.id
+  );
+
+
+}
       socket.isGuest = isGuest ?? !email;
       socket.guestId = guestId || null;
   
