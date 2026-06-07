@@ -354,24 +354,14 @@ const reconnectTimeout = useRef<any>(null);
           setConnected(true);
         });
 
-        peer.on('error', () => {
+        peer.on('error', (error) => {
+          console.log('PEER ERROR:', error);
           setConnected(false);
-        
-          if (isManualNext.current) return;
-        
-          reconnectTimeout.current = setTimeout(() => {
-            next();
-          }, 1200);
         });
         
         peer.on('close', () => {
+          console.log('PEER CLOSED');
           setConnected(false);
-        
-          if (isManualNext.current) return;
-        
-          reconnectTimeout.current = setTimeout(() => {
-            next();
-          }, 1200);
         });
         
 
