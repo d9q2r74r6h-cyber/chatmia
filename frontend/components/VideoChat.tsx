@@ -267,6 +267,16 @@ const reconnectTimeout = useRef<any>(null);
                 username: 'admchatmia@outlook.com',
                 credential: 'Osorno69#',
               },
+              {
+                urls: 'turn:global.relay.metered.ca:443',
+                username: 'admchatmia@outlook.com',
+                credential: 'Osorno69#',
+              },
+              {
+                urls: 'turns:global.relay.metered.ca:443',
+                username: 'admchatmia@outlook.com',
+                credential: 'Osorno69#',
+              },
             ],
           },
         });
