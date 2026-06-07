@@ -49,7 +49,6 @@ export default function VideoChat({
   const hasTrackedConnection = useRef(false);
   const isManualNext = useRef(false);
 const reconnectTimeout = useRef<any>(null);
-const pendingSignalsRef = useRef<any[]>([]);
 
   const localVideoMobile = useRef<HTMLVideoElement>(null);
   const localVideoDesktop = useRef<HTMLVideoElement>(null);
@@ -122,39 +121,14 @@ const pendingSignalsRef = useRef<any[]>([]);
     };
 
     const attachRemoteStream = (stream: MediaStream) => {
-      const isMobile = window.innerWidth < 1024;
-    
-      const video = isMobile
-        ? remoteVideoMobile.current
-        : remoteVideoDesktop.current;
-    
-      if (!video) {
-        console.log('VIDEO REMOTO NO DISPONIBLE');
-        return;
-      }
-    
-      if (video.srcObject === stream) {
-        console.log('STREAM REMOTO YA ASIGNADO');
-        return;
-      }
-    
-      console.log('ASIGNANDO STREAM REMOTO');
-    
-      video.pause();
-      video.srcObject = stream;
-      video.muted = false;
-      video.volume = 1;
-    
-      setTimeout(() => {
-        video
-          .play()
-          .then(() => {
-            console.log('VIDEO REMOTO REPRODUCIENDO');
-          })
-          .catch((error) => {
-            console.log('ERROR PLAY VIDEO REMOTO:', error);
-          });
-      }, 300);
+      [remoteVideoMobile.current, remoteVideoDesktop.current].forEach(
+        (video) => {
+          if (video) {
+            video.srcObject = stream;
+            video.play().catch(console.error);
+          }
+        }
+      );
     };
 
     const start = async () => {
@@ -176,20 +150,7 @@ const pendingSignalsRef = useRef<any[]>([]);
       });
 
       socket.on('signal', ({ signal }) => {
-        console.log('SIGNAL RECIBIDA');
-      
-        const peer = peerRef.current as any;
-      
-        if (!peer || peer.destroyed) {
-          console.log('SIGNAL IGNORADA: peer destruido o inexistente');
-          return;
-        }
-      
-        try {
-          peer.signal(signal);
-        } catch (error) {
-          console.log('ERROR AL PROCESAR SIGNAL:', error);
-        }
+        peerRef.current?.signal(signal);
       });
 
       socket.on('chat-message', ({ message }) => {
@@ -286,12 +247,6 @@ const pendingSignalsRef = useRef<any[]>([]);
       });
 
       socket.on('matched', ({ partnerId, initiator, partner }) => {
-        console.log('MATCH ENCONTRADO', {
-          partnerId,
-          initiator,
-          partner,
-        });
-      
         setPartnerInfo(partner || null);
         setRemoteReady(false);
         setConnecting(false);
@@ -315,14 +270,6 @@ const pendingSignalsRef = useRef<any[]>([]);
             ],
           },
         });
-
-        
-
-pendingSignalsRef.current.forEach((signal) => {
-  peer.signal(signal);
-});
-
-pendingSignalsRef.current = [];
 
         peer.on('signal', (signal) => {
           socket.emit('signal', {
@@ -377,28 +324,17 @@ pendingSignalsRef.current = [];
         });
 
         peer.on('stream', (remoteStream) => {
-          console.log('REMOTE STREAM RECIBIDO');
-        
-          console.log(
-            'TRACKS REMOTOS:',
-            remoteStream.getTracks().map((track) => ({
-              kind: track.kind,
-              enabled: track.enabled,
-              readyState: track.readyState,
-            }))
-          );
-        
-          attachRemoteStream(remoteStream);
           setRemoteReady(true);
-        
+          attachRemoteStream(remoteStream);
+
           lastRemoteTrackTime.current = Date.now();
-        
+
           remoteStream.getTracks().forEach((track) => {
             track.onunmute = () => {
               lastRemoteTrackTime.current = Date.now();
             };
           });
-        
+
           setConnecting(false);
           setConnected(true);
         });
@@ -699,7 +635,7 @@ clearTimeout(reconnectTimeout.current);
   ) : null;
 
   const remoteLoading = !remoteReady ? (
-    <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-10 pointer-events-none">
+    <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-10">
       <div className="text-sm text-white/60 animate-pulse">
         Conectando video...
       </div>
@@ -773,138 +709,141 @@ clearTimeout(reconnectTimeout.current);
       </header>
 
       <section className="flex-1 min-h-0 overflow-hidden">
-            
+        <div className="flex lg:hidden flex-col h-full">
+          <div className="relative flex-1 min-h-0 border-b border-white/10 bg-black">
+            {remoteLoading}
+            {reactionOverlay}
 
-  <div className="flex lg:hidden flex-col h-full">
+            <video
+              ref={remoteVideoMobile}
+              autoPlay
+              playsInline
+              muted={false}
+              controls={false}
+              disablePictureInPicture
+              controlsList="nodownload nofullscreen noremoteplayback"
+              className="w-full h-full object-cover transition-opacity duration-300"
+            />
 
-  {/* VIDEO REMOTO */}
-  <div className="relative flex-1 min-h-0 border-b border-white/10 bg-blue-500">    
-    {remoteLoading}
-    {reactionOverlay}
+            <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs backdrop-blur-md">
+              {partnerLabel}
+            </div>
+            </div>
 
-    <video
-  ref={remoteVideoMobile}
-  autoPlay
-  playsInline
-  muted={false}
-  controls
-  style={{
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    background: 'red',
-  }}
-/>
 
-    <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs backdrop-blur-md">
-      {partnerLabel}
-    </div>
-  </div>
+          <div className="relative flex-1 min-h-0 bg-black">
+            <video
+              ref={localVideoMobile}
+              autoPlay
+              muted
+              playsInline
+              controls={false}
+              className="w-full h-full object-cover"
+            />
 
-  {/* VIDEO LOCAL */}
-  <div className="relative flex-1 min-h-0 bg-black">
-    <video
-      ref={localVideoMobile}
-      autoPlay
-      muted
-      playsInline
-      controls={false}
-      className="w-full h-full object-cover"
-    />
+            <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs backdrop-blur-md">
+              Tú
+            </div>
 
-    <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs backdrop-blur-md">
-      Tú
-    </div>
+            <div className="absolute top-3 right-3 flex gap-2">
+              <button
+                onClick={toggleMic}
+                className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-lg"
+              >
+                {micEnabled ? '🎤' : '🔇'}
+              </button>
 
-    {/* CONTROLES SUPERIORES */}
-    <div className="absolute top-3 right-3 flex gap-2 z-30">
-      <button
-        onClick={reportUser}
-        className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/30 backdrop-blur-md flex items-center justify-center"
-        title="Reportar"
-      >
-        🚩
-      </button>
+              <button
+                onClick={toggleCamera}
+                className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-lg"
+              >
+                {cameraEnabled ? '📷' : '🚫'}
+              </button>
 
-      <button
-        onClick={next}
-        className="h-10 px-4 rounded-full bg-white text-black font-semibold"
-      >
-        Siguiente
-      </button>
+              <button
+                onClick={switchCamera}
+                className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-lg"
+              >
+                🔄
+              </button>
+               </div>
 
-      <button
-        onClick={toggleMic}
-        className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center"
-      >
-        {micEnabled ? '🎤' : '🔇'}
-      </button>
+            <div className="absolute bottom-3 left-3 right-3 space-y-2">
+              <div className="max-h-24 overflow-y-auto space-y-1">
+              {messages.slice(-3).map((msg, index) => (
+                  <div
+                    key={`${msg.text}-${index}`}
+                    className={`text-xs px-3 py-2 rounded-2xl max-w-[65%] backdrop-blur-md border ${
+                      msg.mine
+                        ? 'ml-auto bg-pink-500/25 border-pink-300/20 text-white'
+                        : 'bg-black/35 border-white/10 text-white'
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                ))}
 
-      <button
-        onClick={toggleCamera}
-        className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center"
-      >
-        {cameraEnabled ? '📷' : '🚫'}
-      </button>
+                {typing && (
+                  <div className="text-xs text-white/60 px-2">
+                    Escribiendo...
+                  </div>
+                )}
+              </div>
 
-      <button
-        onClick={switchCamera}
-        className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center"
-      >
-        🔄
-      </button>
-    </div>
+              <div className="flex gap-2">
+                <input
+                  value={message}
+                  onChange={(e) => {
+                    setMessage(e.target.value);
+                    socketRef.current?.emit('typing');
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      sendMessage();
+                    }
+                  }}
+                  placeholder="Mensaje..."
+                  className="flex-1 h-10 rounded-2xl bg-black/60 border border-white/10 px-4 outline-none text-sm"
+                />
 
-    {/* MENSAJES */}
-    <div className="absolute bottom-3 left-3 right-3 space-y-2 z-30">
-      <div className="max-h-20 overflow-y-auto space-y-1">
-        {messages.slice(-2).map((msg, index) => (
-          <div
-            key={`${msg.text}-${index}`}
-            className={`text-xs px-3 py-2 rounded-2xl max-w-[65%] backdrop-blur-md border ${
-              msg.mine
-                ? 'ml-auto bg-pink-500/25 border-pink-300/20 text-white'
-                : 'bg-black/35 border-white/10 text-white'
-            }`}
-          >
-            {msg.text}
+                <button
+                  onClick={sendMessage}
+                  className="px-4 rounded-2xl bg-white text-black text-sm font-medium"
+                >
+                  Enviar
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={next}
+                  className="h-10 rounded-2xl bg-white/90 text-black text-sm font-semibold"
+                >
+                  Siguiente
+                </button>
+
+                <button
+                  onClick={reportUser}
+                  className="h-10 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-300 text-sm font-semibold"
+                >
+                  Reportar
+                </button>
+              </div>
+
+              <div className="flex gap-2 overflow-x-auto">
+                {['❤️', '🔥', '😂', '👋', '😍'].map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => sendReaction(emoji)}
+                    className="w-11 h-11 shrink-0 rounded-full bg-black/60 backdrop-blur-md text-xl"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-        ))}
-
-        {typing && (
-          <div className="text-xs text-white/60 px-2">
-            Escribiendo...
-          </div>
-        )}
-      </div>
-
-      <div className="flex gap-2">
-        <input
-          value={message}
-          onChange={(e) => {
-            setMessage(e.target.value);
-            socketRef.current?.emit('typing');
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              sendMessage();
-            }
-          }}
-          placeholder="Mensaje..."
-          className="flex-1 h-10 rounded-2xl bg-black/60 border border-white/10 px-4 outline-none text-sm"
-        />
-
-        <button
-          onClick={sendMessage}
-          className="px-4 rounded-2xl bg-white text-black text-sm font-medium"
-        >
-          Enviar
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
+        </div>
 
         <div className="hidden lg:grid h-full min-h-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px] gap-2 p-2">
           <div className="relative min-w-0 h-full rounded-3xl overflow-hidden border border-white/10 bg-black">
