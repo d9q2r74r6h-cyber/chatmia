@@ -255,7 +255,7 @@ const reconnectTimeout = useRef<any>(null);
 
         const peer = new Peer({
           initiator,
-          trickle: false,
+          trickle: true,
           stream,
           config: {
             iceTransportPolicy: 'relay',
