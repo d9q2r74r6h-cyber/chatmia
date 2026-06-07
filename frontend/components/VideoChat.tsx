@@ -21,6 +21,8 @@ type Props = {
   email?: string | null;
   guestId?: string | null;
   isGuest?: boolean;
+  region?: string;
+  city?: string;
 
   onBack?: () => void;
 };
@@ -33,14 +35,16 @@ type Message = {
 export default function VideoChat({
   gender,
   country,
-  cameraMode,
 
+  region,
+  city,
+
+  cameraMode,
   email,
   guestId,
   isGuest,
-
   onBack,
-}: Props){
+}: Props) {
 
   const hasTrackedConnection = useRef(false);
   const isManualNext = useRef(false);
@@ -207,12 +211,12 @@ const reconnectTimeout = useRef<any>(null);
         socket.emit('find-partner', {
         gender,
         country,
-
         email: email || user?.email || null,
         userId: user?.id || null,
-
         guestId,
         isGuest,
+        region,
+        city,
       });
       });
 
@@ -233,7 +237,8 @@ const reconnectTimeout = useRef<any>(null);
       socket.emit('find-partner', {
         gender,
         country,
-      
+        region,
+        city,
         email: email || user?.email || null,
         userId: user?.id || null,
       
@@ -437,7 +442,10 @@ clearTimeout(reconnectTimeout.current);
         socketRef.current?.emit('find-partner', {
           gender,
           country,
-        
+          region,
+          city, 
+          
+                   
           email,
           guestId,
           isGuest,

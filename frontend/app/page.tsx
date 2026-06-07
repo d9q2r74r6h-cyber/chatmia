@@ -20,11 +20,21 @@ export default function Page() {
   const [gender, setGender] = useState<string | null>(null);
   const [cameraMode, setCameraMode] =
     useState<'user' | 'environment'>('user');
+
     const [country, setCountry] = useState({
-      code: 'CL',
-      name: 'Chile',
-      flag: '🇨🇱',
+      code: '',
+      name: '',
+      flag: '🌎',
     });
+    
+    const [location, setLocation] = useState({
+      region: '',
+      city: '',
+    });
+      
+    
+  
+
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [entering, setEntering] = useState(false);
@@ -111,6 +121,13 @@ export default function Page() {
     try {
       const response = await fetch('https://ipapi.co/json/');
       const data = await response.json();
+
+      setLocation({
+      region: data.region || '',
+      city: data.city || '',
+    });
+
+    
     
       const detected = countries.find(
         (item) => item.code === data.country_code
@@ -167,14 +184,17 @@ export default function Page() {
   if (gender) {
     return (
       <VideoChat
-      gender={gender}
-      country={country}
-      cameraMode={cameraMode}
-      email={user?.email || null}
-      guestId={!user ? getGuestId() : null}
-      isGuest={!user}
-      onBack={() => setGender(null)}
-/>
+        gender={gender}
+        country={country}
+        region={location.region}
+        city={location.city}
+        cameraMode={cameraMode}
+        email={user?.email || null}
+        guestId={!user ? getGuestId() : null}
+        isGuest={!user}
+        onBack={() => setGender(null)}
+        
+      />
     );
   }
 
