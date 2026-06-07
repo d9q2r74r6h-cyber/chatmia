@@ -122,26 +122,23 @@ const pendingSignalsRef = useRef<any[]>([]);
     };
 
     const attachRemoteStream = (stream: MediaStream) => {
-      [remoteVideoMobile.current, remoteVideoDesktop.current].forEach(
-        (video) => {
-          if (!video) return;
-    
-          video.srcObject = stream;
-          video.muted = false;
-          video.volume = 1;
+      if (window.innerWidth < 1024) {
+        if (remoteVideoMobile.current) {
+          remoteVideoMobile.current.srcObject = stream;
     
           setTimeout(() => {
-            video
-              .play()
-              .then(() => {
-                console.log('VIDEO REMOTO REPRODUCIENDO');
-              })
-              .catch((error) => {
-                console.log('ERROR PLAY VIDEO REMOTO:', error);
-              });
+            remoteVideoMobile.current?.play();
           }, 100);
         }
-      );
+      } else {
+        if (remoteVideoDesktop.current) {
+          remoteVideoDesktop.current.srcObject = stream;
+    
+          setTimeout(() => {
+            remoteVideoDesktop.current?.play();
+          }, 100);
+        }
+      }
     };
 
     const start = async () => {
