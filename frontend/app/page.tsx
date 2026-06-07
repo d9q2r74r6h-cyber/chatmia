@@ -31,6 +31,11 @@ export default function Page() {
       region: '',
       city: '',
     });
+
+    const ubicacionLista =
+  !!country.name &&
+  !!location.region &&
+  !!location.city;    
       
     
   
@@ -198,19 +203,20 @@ export default function Page() {
       region: location.region,
       city: location.city,
     });
-
+  
     if (!country.name || !location.region || !location.city) {
-      alert('Estamos detectando tu ubicación. Intenta nuevamente en unos segundos.');
+      alert(
+        'Estamos detectando tu ubicación. Intenta nuevamente en unos segundos.'
+      );
       return;
     }
   
-  
     setEntering(true);
-
+  
     previewStreamRef.current
       ?.getTracks()
       .forEach((track) => track.stop());
-
+  
     setTimeout(() => {
       setGender(selectedGender);
       setEntering(false);
@@ -280,6 +286,9 @@ export default function Page() {
     );
   }
 
+
+
+
   return (
     <main className="min-h-screen bg-[#070709] text-white flex items-center justify-center px-6 relative overflow-hidden">
       <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
@@ -294,9 +303,10 @@ export default function Page() {
         </div>
 
         {user && (
-              <button
+              <button   
                 onClick={() => {
                   window.location.href = '/profile';
+                  
                 }}
                 className="h-11 px-5 rounded-2xl bg-white/10 border border-white/10 text-white font-semibold hover:bg-white/20 transition"
               >
@@ -404,27 +414,49 @@ export default function Page() {
             </div>
           </div>
 
+
           <div className="grid grid-cols-1 gap-3">
             <button
+              disabled={!ubicacionLista}
               onClick={() => enterChat('male')}
-              className="h-14 rounded-2xl bg-white text-black font-medium hover:scale-[1.02] active:scale-[0.98] transition"
+              className={`h-14 rounded-2xl font-medium transition ${
+                ubicacionLista
+                  ? 'bg-white text-black hover:scale-[1.02] active:scale-[0.98]'
+                  : 'bg-white/20 text-white/40 cursor-not-allowed'
+              }`}
             >
               👨 Hombre
             </button>
 
             <button
+              disabled={!ubicacionLista}
               onClick={() => enterChat('female')}
-              className="h-14 rounded-2xl bg-white/10 border border-white/10 hover:bg-white/20 transition"
+              className={`h-14 rounded-2xl border transition ${
+                ubicacionLista
+                  ? 'bg-white/10 border-white/10 hover:bg-white/20'
+                  : 'bg-white/5 border-white/5 text-white/40 cursor-not-allowed'
+              }`}
             >
               👩 Mujer
             </button>
 
             <button
+              disabled={!ubicacionLista}
               onClick={() => enterChat('couple')}
-              className="h-14 rounded-2xl bg-white/10 border border-white/10 hover:bg-white/20 transition"
+              className={`h-14 rounded-2xl border transition ${
+                ubicacionLista
+                  ? 'bg-white/10 border-white/10 hover:bg-white/20'
+                  : 'bg-white/5 border-white/5 text-white/40 cursor-not-allowed'
+              }`}
             >
               👩‍❤️‍👨 Pareja
             </button>
+
+            {!ubicacionLista && (
+              <div className="text-center text-xs text-white/40 pt-2">
+                🌎 Detectando tu ubicación...
+              </div>
+            )}
           </div>
         </div>
 
