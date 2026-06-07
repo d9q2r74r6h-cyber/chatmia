@@ -511,8 +511,8 @@ if (msgData.count > 8) {
     const flagged = !!matchedWord;
   
     // enviar mensaje al otro usuario
-    partnerSocket?.emit('message', {
-      text: message,
+    io.to(partnerSocketId).emit('chat-message', {
+      message,
       from: socket.id,
     });
   
