@@ -548,7 +548,9 @@ clearTimeout(reconnectTimeout.current);
       reason,
     });
 
-    alert('Reporte enviado. Gracias por ayudar a mantener ChatMia seguro.');
+    setTimeout(() => {
+      next();
+    }, 300);
   };
 
   const containsBannedWord = (text: string) => {
