@@ -33,6 +33,9 @@ export default function DashboardPage() {
     matches: 0,
     uniqueUsers: 0,
     countries: 0,
+    nexts: 0,
+    messagesSent: 0,
+    avgDuration: 0,
   });
 
   const [chartData, setChartData] = useState<any[]>([]);
@@ -90,7 +93,25 @@ export default function DashboardPage() {
 
         supabase
           .from('visits')
-          .select('*')
+          .select(`
+            id,
+            socket_id,
+            email,
+            guest_id,
+            is_guest,
+            gender,
+            country,
+            flag,
+            region,
+            city,
+            matched,
+            match_count,
+            next_count,
+            messages_sent,
+            duration_minutes,
+            connected_at,
+            disconnected_at
+          `)
           .order('connected_at', { ascending: false })
           .limit(50),
       ]);
@@ -104,15 +125,45 @@ export default function DashboardPage() {
 
     const visits = visitsRes.data || [];
 
+    const totalMatches = visits.reduce(
+      (acc, visit) => acc + (visit.match_count || 0),
+      0
+    );
+
+    const totalNexts = visits.reduce(
+      (acc, visit) => acc + (visit.next_count || 0),
+      0
+    );
+
+    const totalMessagesSent = visits.reduce(
+      (acc, visit) => acc + (visit.messages_sent || 0),
+      0
+    );
+
+    const completedVisits = visits.filter(
+      (visit) => visit.disconnected_at
+    );
+
+    const avgDuration =
+      completedVisits.length > 0
+        ? completedVisits.reduce(
+            (acc, visit) => acc + (visit.duration_minutes || 0),
+            0
+          ) / completedVisits.length
+        : 0;
+
     setAnalytics({
       visits: visits.length,
-      matches: visits.filter((v) => v.matched).length,
+      matches: totalMatches,
       uniqueUsers: new Set(
-        visits.map((v) => v.email || v.socket_id)
+        visits.map((v) => v.email || v.guest_id || v.socket_id)
       ).size,
       countries: new Set(
         visits.map((v) => v.country).filter(Boolean)
       ).size,
+      nexts: totalNexts,
+      messagesSent: totalMessagesSent,
+      avgDuration,
     });
 
     setLastVisits(visits);
@@ -141,24 +192,31 @@ export default function DashboardPage() {
   }
 
   const realtimeCards = [
-    { title: 'Online Users', value: realtime.online },
-    { title: 'Active Chats', value: realtime.activeChats },
-    { title: 'Waiting Users', value: realtime.waitingNormal },
+    { title: 'Usuarios Online', value: realtime.online },
+    { title: 'Chats Activos', value: realtime.activeChats },
+    { title: 'En Espera', value: realtime.waitingNormal },
     { title: 'Shadow Queue', value: realtime.waitingShadow },
   ];
 
   const moderationCards = [
-    { title: 'Reports', value: stats.reports },
-    { title: 'Flagged Messages', value: stats.flagged },
-    { title: 'Banned Users', value: stats.bans },
-    { title: 'Messages', value: stats.messages },
+    { title: 'Reportes', value: stats.reports },
+    { title: 'Mensajes Marcados', value: stats.flagged },
+    { title: 'Usuarios Baneados', value: stats.bans },
+    { title: 'Mensajes Totales', value: stats.messages },
   ];
 
   const analyticsCards = [
-    { title: 'Visits Today', value: analytics.visits },
-    { title: 'Matches Today', value: analytics.matches },
-    { title: 'Unique Users', value: analytics.uniqueUsers },
-    { title: 'Countries', value: analytics.countries },
+    { title: 'Visitas', value: analytics.visits },
+    { title: 'Matches', value: analytics.matches },
+    { title: 'Nexts', value: analytics.nexts },
+    { title: 'Mensajes Enviados', value: analytics.messagesSent },
+    { title: 'Usuarios Únicos', value: analytics.uniqueUsers },
+    { title: 'Países', value: analytics.countries },
+    {
+      title: 'Duración Promedio',
+      value: Number(analytics.avgDuration.toFixed(2)),
+      suffix: ' min',
+    },
   ];
 
   return (
@@ -173,7 +231,7 @@ export default function DashboardPage() {
 
       <section className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
         <h2 className="mb-6 text-2xl font-semibold">
-          Users Activity
+          Actividad de Usuarios
         </h2>
 
         <div className="h-[300px]">
@@ -196,18 +254,23 @@ export default function DashboardPage() {
 
       <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
         <h2 className="mb-6 text-2xl font-semibold">
-          Last Visits
+          Últimas Visitas
         </h2>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="text-zinc-400">
-                <th className="pb-4">Time</th>
-                <th className="pb-4">Country</th>
-                <th className="pb-4">Gender</th>
-                <th className="pb-4">Match</th>
-                <th className="pb-4">Email</th>
+                <th className="pb-4">Hora</th>
+                <th className="pb-4">País</th>
+                <th className="pb-4">Región</th>
+                <th className="pb-4">Ciudad</th>
+                <th className="pb-4">Género</th>
+                <th className="pb-4">Matches</th>
+                <th className="pb-4">Nexts</th>
+                <th className="pb-4">Mensajes</th>
+                <th className="pb-4">Duración</th>
+                <th className="pb-4">Usuario</th>
               </tr>
             </thead>
 
@@ -215,10 +278,10 @@ export default function DashboardPage() {
               {lastVisits.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={10}
                     className="border-t border-zinc-800 py-6 text-center text-zinc-500"
                   >
-                    No visits yet.
+                    No hay visitas todavía.
                   </td>
                 </tr>
               )}
@@ -237,15 +300,15 @@ export default function DashboardPage() {
                     })}
                   </td>
 
-                  <td>
-                    {visit.flag || ''} {visit.country || '—'}
-                  </td>
-
+                  <td>{visit.flag || ''} {visit.country || '—'}</td>
+                  <td>{visit.region || '—'}</td>
+                  <td>{visit.city || '—'}</td>
                   <td>{visit.gender || '—'}</td>
-
-                  <td>{visit.matched ? '✅ Yes' : '❌ No'}</td>
-
-                  <td>{visit.email || 'Anonymous'}</td>
+                  <td>{visit.match_count || 0}</td>
+                  <td>{visit.next_count || 0}</td>
+                  <td>{visit.messages_sent || 0}</td>
+                  <td>{visit.duration_minutes || 0} min</td>
+                  <td>{visit.email || 'Invitado'}</td>
                 </tr>
               ))}
             </tbody>
@@ -260,7 +323,7 @@ function CardGrid({
   cards,
   variant,
 }: {
-  cards: { title: string; value: number }[];
+  cards: { title: string; value: number; suffix?: string }[];
   variant: 'pink' | 'blue' | 'zinc';
 }) {
   const styles = {
@@ -280,6 +343,7 @@ function CardGrid({
 
           <h2 className="text-3xl font-bold text-white">
             {card.value}
+            {card.suffix || ''}
           </h2>
         </div>
       ))}
