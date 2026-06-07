@@ -35,6 +35,8 @@ export default function ReportsPage() {
       return;
     }
 
+    console.log('ADMIN EMAIL:', user?.email);
+
     if (user?.email !== 'admchatmia@outlook.com') {
       window.location.href = '/';
       return;
