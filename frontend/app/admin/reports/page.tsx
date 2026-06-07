@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 type Report = {
   id: number;
   reporter_email: string | null;
@@ -11,6 +13,9 @@ type Report = {
   reason: string;
   created_at: string;
 };
+
+
+
 
 export default function ReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -21,6 +26,20 @@ export default function ReportsPage() {
   }, []);
 
   async function fetchReports() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user?.email) {
+      window.location.href = '/auth';
+      return;
+    }
+
+    if (user?.email !== 'admchatmia@outlook.com') {
+      window.location.href = '/';
+      return;
+    }
+
     const { data, error } = await supabase
       .from('reports')
       .select('*')
@@ -38,8 +57,15 @@ export default function ReportsPage() {
   }
 
   if (loading) {
-    return <div className="p-10 text-white">Cargando reportes...</div>;
+    return (
+      <div className="p-10 text-white">
+        Cargando reportes...
+      </div>
+    );
   }
+
+  
+  
 
   return (
     <div className="min-h-screen bg-black text-white p-8">
