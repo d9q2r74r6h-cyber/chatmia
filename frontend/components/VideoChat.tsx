@@ -124,10 +124,13 @@ const pendingSignalsRef = useRef<any[]>([]);
     const attachRemoteStream = (stream: MediaStream) => {
       [remoteVideoMobile.current, remoteVideoDesktop.current].forEach(
         (video) => {
-          if (video) {
-            video.srcObject = stream;
-            video.muted = false;
-            video.volume = 1;
+          if (!video) return;
+    
+          video.srcObject = stream;
+          video.muted = false;
+          video.volume = 1;
+    
+          setTimeout(() => {
             video
               .play()
               .then(() => {
@@ -136,7 +139,7 @@ const pendingSignalsRef = useRef<any[]>([]);
               .catch((error) => {
                 console.log('ERROR PLAY VIDEO REMOTO:', error);
               });
-          }
+          }, 100);
         }
       );
     };
@@ -371,9 +374,10 @@ pendingSignalsRef.current = [];
               readyState: track.readyState,
             }))
           );
-        
-          setRemoteReady(true);
+          
           attachRemoteStream(remoteStream);
+          setRemoteReady(true);
+          
 
           lastRemoteTrackTime.current = Date.now();
 
@@ -768,7 +772,7 @@ clearTimeout(reconnectTimeout.current);
     {reactionOverlay}
 
     <video
-      key={remoteReady ? 'remote-ready' : 'remote-waiting'}
+      
       ref={remoteVideoMobile}
       autoPlay
       playsInline
