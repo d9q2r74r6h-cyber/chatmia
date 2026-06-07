@@ -538,7 +538,9 @@ clearTimeout(reconnectTimeout.current);
     } = await supabase.auth.getUser();
 
     await supabase.from('reports').insert({
-      reporter_email: user?.email || 'unknown',
+      reporter_email: user?.email || email || 'guest',
+      reported_email: partnerInfo?.email || null,
+      reported_guest_id: partnerInfo?.guestId || null,
       reason,
     });
 
