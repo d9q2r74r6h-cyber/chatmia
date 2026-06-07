@@ -122,23 +122,39 @@ const pendingSignalsRef = useRef<any[]>([]);
     };
 
     const attachRemoteStream = (stream: MediaStream) => {
-      if (window.innerWidth < 1024) {
-        if (remoteVideoMobile.current) {
-          remoteVideoMobile.current.srcObject = stream;
+      const isMobile = window.innerWidth < 1024;
     
-          setTimeout(() => {
-            remoteVideoMobile.current?.play();
-          }, 100);
-        }
-      } else {
-        if (remoteVideoDesktop.current) {
-          remoteVideoDesktop.current.srcObject = stream;
+      const video = isMobile
+        ? remoteVideoMobile.current
+        : remoteVideoDesktop.current;
     
-          setTimeout(() => {
-            remoteVideoDesktop.current?.play();
-          }, 100);
-        }
+      if (!video) {
+        console.log('VIDEO REMOTO NO DISPONIBLE');
+        return;
       }
+    
+      if (video.srcObject === stream) {
+        console.log('STREAM REMOTO YA ASIGNADO');
+        return;
+      }
+    
+      console.log('ASIGNANDO STREAM REMOTO');
+    
+      video.pause();
+      video.srcObject = stream;
+      video.muted = false;
+      video.volume = 1;
+    
+      setTimeout(() => {
+        video
+          .play()
+          .then(() => {
+            console.log('VIDEO REMOTO REPRODUCIENDO');
+          })
+          .catch((error) => {
+            console.log('ERROR PLAY VIDEO REMOTO:', error);
+          });
+      }, 300);
     };
 
     const start = async () => {
@@ -362,7 +378,7 @@ pendingSignalsRef.current = [];
 
         peer.on('stream', (remoteStream) => {
           console.log('REMOTE STREAM RECIBIDO');
-
+        
           console.log(
             'TRACKS REMOTOS:',
             remoteStream.getTracks().map((track) => ({
@@ -371,19 +387,18 @@ pendingSignalsRef.current = [];
               readyState: track.readyState,
             }))
           );
-          
+        
           attachRemoteStream(remoteStream);
           setRemoteReady(true);
-          
-
+        
           lastRemoteTrackTime.current = Date.now();
-
+        
           remoteStream.getTracks().forEach((track) => {
             track.onunmute = () => {
               lastRemoteTrackTime.current = Date.now();
             };
           });
-
+        
           setConnecting(false);
           setConnected(true);
         });
