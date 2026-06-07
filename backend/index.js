@@ -186,6 +186,43 @@ async function incrementarNextCount(socketId) {
     .is('disconnected_at', null);
 }
 
+async function incrementarMessagesSent(socketId) {
+  if (!supabase) return;
+
+  const { data, error: selectError } = await supabase
+    .from('visits')
+    .select('messages_sent')
+    .eq('socket_id', socketId)
+    .is('disconnected_at', null)
+    .maybeSingle();
+
+  if (selectError) {
+    console.log(
+      'ERROR AL LEER MESSAGES SENT:',
+      selectError.message
+    );
+    return;
+  }
+
+  const nuevoTotal =
+    (data?.messages_sent || 0) + 1;
+
+  const { error } = await supabase
+    .from('visits')
+    .update({
+      messages_sent: nuevoTotal,
+    })
+    .eq('socket_id', socketId)
+    .is('disconnected_at', null);
+
+  if (error) {
+    console.log(
+      'ERROR AL ACTUALIZAR MESSAGES SENT:',
+      error.message
+    );
+  }
+}
+
 async function markVisitDisconnected(socketId) {
   if (!supabase) return;
 
@@ -442,14 +479,7 @@ if (msgData.count > 8) {
         });
     }
 
-    await supabase
-      .from('visits')
-      .update({
-        messages_sent:
-          (users.get(socket.id)?.messagesSent || 0) + 1,
-      })
-      .eq('socket_id', socket.id)
-      .is('disconnected_at', null);
+    await incrementarMessagesSent(socket.id);
   
   });
 
