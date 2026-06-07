@@ -687,7 +687,7 @@ clearTimeout(reconnectTimeout.current);
   ) : null;
 
   const remoteLoading = !remoteReady ? (
-    <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-10">
+    <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-10 pointer-events-none">
       <div className="text-sm text-white/60 animate-pulse">
         Conectando video...
       </div>
@@ -766,22 +766,23 @@ clearTimeout(reconnectTimeout.current);
   <div className="flex lg:hidden flex-col h-full">
 
   {/* VIDEO REMOTO */}
-  <div className="relative flex-1 min-h-0 border-b border-white/10 bg-black">
-    
+  <div className="relative flex-1 min-h-0 border-b border-white/10 bg-blue-500">    
     {remoteLoading}
     {reactionOverlay}
 
     <video
-      
-      ref={remoteVideoMobile}
-      autoPlay
-      playsInline
-      muted={false}
-      controls={false}
-      disablePictureInPicture
-      controlsList="nodownload nofullscreen noremoteplayback"
-      className="w-full h-full object-cover transition-opacity duration-300"
-    />
+  ref={remoteVideoMobile}
+  autoPlay
+  playsInline
+  muted={false}
+  controls
+  style={{
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    background: 'red',
+  }}
+/>
 
     <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs backdrop-blur-md">
       {partnerLabel}
