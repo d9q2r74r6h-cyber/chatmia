@@ -49,6 +49,7 @@ export default function VideoChat({
   const hasTrackedConnection = useRef(false);
   const isManualNext = useRef(false);
 const reconnectTimeout = useRef<any>(null);
+const pendingSignalsRef = useRef<any[]>([]);
 
   const localVideoMobile = useRef<HTMLVideoElement>(null);
   const localVideoDesktop = useRef<HTMLVideoElement>(null);
@@ -150,7 +151,20 @@ const reconnectTimeout = useRef<any>(null);
       });
 
       socket.on('signal', ({ signal }) => {
-        peerRef.current?.signal(signal);
+        console.log('SIGNAL RECIBIDA');
+      
+        const peer = peerRef.current as any;
+      
+        if (!peer || peer.destroyed) {
+          console.log('SIGNAL IGNORADA: peer destruido o inexistente');
+          return;
+        }
+      
+        try {
+          peer.signal(signal);
+        } catch (error) {
+          console.log('ERROR AL PROCESAR SIGNAL:', error);
+        }
       });
 
       socket.on('chat-message', ({ message }) => {
@@ -247,6 +261,12 @@ const reconnectTimeout = useRef<any>(null);
       });
 
       socket.on('matched', ({ partnerId, initiator, partner }) => {
+        console.log('MATCH ENCONTRADO', {
+          partnerId,
+          initiator,
+          partner,
+        });
+      
         setPartnerInfo(partner || null);
         setRemoteReady(false);
         setConnecting(false);
@@ -270,6 +290,14 @@ const reconnectTimeout = useRef<any>(null);
             ],
           },
         });
+
+        
+
+pendingSignalsRef.current.forEach((signal) => {
+  peer.signal(signal);
+});
+
+pendingSignalsRef.current = [];
 
         peer.on('signal', (signal) => {
           socket.emit('signal', {
@@ -324,6 +352,8 @@ const reconnectTimeout = useRef<any>(null);
         });
 
         peer.on('stream', (remoteStream) => {
+          console.log('REMOTE STREAM RECIBIDO');
+        
           setRemoteReady(true);
           attachRemoteStream(remoteStream);
 
