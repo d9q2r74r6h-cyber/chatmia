@@ -106,7 +106,7 @@ async function saveVisit(socket, data = {}) {
       socket.handshake.headers['user-agent'] || null,
   });
 
-  
+
   if (error) {
     console.log(
       'SAVE VISIT ERROR:',
@@ -191,6 +191,12 @@ io.on('connection', (socket) => {
     city,
 
   }) => {
+
+    console.log('LOCATION RECEIVED:', {
+      country,
+      region,
+      city,
+    });
     
 
     await saveVisit(socket, {
