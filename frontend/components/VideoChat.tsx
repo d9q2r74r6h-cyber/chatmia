@@ -126,7 +126,16 @@ const pendingSignalsRef = useRef<any[]>([]);
         (video) => {
           if (video) {
             video.srcObject = stream;
-            video.play().catch(console.error);
+            video.muted = false;
+            video.volume = 1;
+            video
+              .play()
+              .then(() => {
+                console.log('VIDEO REMOTO REPRODUCIENDO');
+              })
+              .catch((error) => {
+                console.log('ERROR PLAY VIDEO REMOTO:', error);
+              });
           }
         }
       );
@@ -759,6 +768,7 @@ clearTimeout(reconnectTimeout.current);
     {reactionOverlay}
 
     <video
+      key={remoteReady ? 'remote-ready' : 'remote-waiting'}
       ref={remoteVideoMobile}
       autoPlay
       playsInline
