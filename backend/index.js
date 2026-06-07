@@ -128,6 +128,38 @@ async function markVisitMatched(socketId) {
     .is('disconnected_at', null);
 }
 
+async function incrementarMatchCount(socketId) {
+  if (!supabase) return;
+
+  const { data, error: selectError } = await supabase
+    .from('visits')
+    .select('match_count')
+    .eq('socket_id', socketId)
+    .is('disconnected_at', null)
+    .maybeSingle();
+
+  if (selectError) {
+    console.log('ERROR AL LEER MATCH COUNT:', selectError.message);
+    return;
+  }
+
+  const nuevoTotal = (data?.match_count || 0) + 1;
+
+  const { error } = await supabase
+    .from('visits')
+    .update({
+      match_count: nuevoTotal,
+    })
+    .eq('socket_id', socketId)
+    .is('disconnected_at', null);
+
+  if (error) {
+    console.log('ERROR AL ACTUALIZAR MATCH COUNT:', error.message);
+  }
+}
+
+
+
 async function markVisitDisconnected(socketId) {
   if (!supabase) return;
 
@@ -262,7 +294,11 @@ io.on('connection', (socket) => {
         partners.set(partnerId, socket.id);
   
         await markVisitMatched(socket.id);
-        await markVisitMatched(partnerId);
+await markVisitMatched(partnerId);
+
+await incrementarMatchCount(socket.id);
+await incrementarMatchCount(partnerId);
+        
 
         console.log(
           'MATCHED:',
