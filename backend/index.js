@@ -330,8 +330,8 @@ io.on('connection', (socket) => {
     });
     
 
-    if (!socket.visitSaved) {
-  await saveVisit(socket, {
+    if (!socket.visitSaved) { 
+      await saveVisit(socket, {
     email,
     guestId,
     isGuest,
@@ -353,6 +353,20 @@ io.on('connection', (socket) => {
 }
       socket.isGuest = isGuest ?? !email;
       socket.guestId = guestId || null;
+
+      users.set(socket.id, {
+        email: email || null,
+        guestId: guestId || null,
+        isGuest: isGuest ?? !email,
+        gender: gender || null,
+        country: country?.name || null,
+        flag: country?.flag || '🌎',
+        region: region || null,
+        city: city || null,
+      });
+
+
+
   
       removeWaiting(socket.id);
       disconnectPair(socket.id);
