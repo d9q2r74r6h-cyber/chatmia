@@ -343,7 +343,7 @@ export default function Page() {
           </div>
 
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
-            ChatMia
+            ChatMia.org
           </h1>
 
           <p className="text-white/40 mt-5 text-lg leading-relaxed">

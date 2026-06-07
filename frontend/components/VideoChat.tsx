@@ -258,20 +258,11 @@ const reconnectTimeout = useRef<any>(null);
           trickle: true,
           stream,
           config: {
-            iceTransportPolicy: 'relay',
+          
             iceServers: [
+              { urls: 'stun:global.stun.twilio.com:3478' },
               {
                 urls: 'turn:global.relay.metered.ca:80',
-                username: 'admchatmia@outlook.com',
-                credential: 'Osorno69#',
-              },
-              {
-                urls: 'turn:global.relay.metered.ca:443',
-                username: 'admchatmia@outlook.com',
-                credential: 'Osorno69#',
-              },
-              {
-                urls: 'turns:global.relay.metered.ca:443',
                 username: 'admchatmia@outlook.com',
                 credential: 'Osorno69#',
               },
