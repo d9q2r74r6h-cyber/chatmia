@@ -626,8 +626,11 @@ clearTimeout(reconnectTimeout.current);
 
   const partnerLabel = (
     <>
-      {partnerInfo?.flag || '🌎'} {getGenderIcon(partnerInfo?.gender)}{' '}
+      {partnerInfo?.flag || '🌎'}{' '}
+      {getGenderIcon(partnerInfo?.gender)}{' '}
       {partnerInfo?.country || 'Sin país'}
+      {partnerInfo?.region ? ` · ${partnerInfo.region}` : ''}
+      {partnerInfo?.city ? ` · ${partnerInfo.city}` : ''}
     </>
   );
 
