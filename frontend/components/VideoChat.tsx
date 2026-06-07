@@ -255,7 +255,7 @@ const reconnectTimeout = useRef<any>(null);
 
         const peer = new Peer({
           initiator,
-          trickle: true,
+          trickle: false,
           stream,
           config: {
             iceTransportPolicy: 'relay',
@@ -284,6 +284,22 @@ const reconnectTimeout = useRef<any>(null);
             to: partnerId,
             signal,
           });
+        });
+
+        peer.on('iceStateChange', (state) => {
+          console.log('ICE STATE:', state);
+        });
+        
+        peer.on('connect', () => {
+          console.log('PEER CONNECTED');
+        });
+        
+        peer.on('error', (error) => {
+          console.log('PEER ERROR:', error);
+        });
+        
+        peer.on('close', () => {
+          console.log('PEER CLOSED');
         });
 
         peer.on('connect', () => {
