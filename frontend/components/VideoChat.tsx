@@ -737,12 +737,7 @@ clearTimeout(reconnectTimeout.current);
               🚩
             </button>
 
-            <button
-              onClick={next}
-              className="w-12 h-12 rounded-full bg-white text-black font-bold backdrop-blur-md flex items-center justify-center"
-            >
-              ▶
-            </button>
+            
           </div>
 
             <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-xs backdrop-blur-md">
@@ -786,6 +781,12 @@ clearTimeout(reconnectTimeout.current);
                 >
                   🔄
                 </button>
+                <button
+              onClick={next}
+              className="w-12 h-12 rounded-full bg-white text-black font-bold backdrop-blur-md flex items-center justify-center"
+            >
+              ▶
+            </button>
               </div>
 
             <div className="absolute bottom-3 left-3 right-3 space-y-2">
