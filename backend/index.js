@@ -226,15 +226,51 @@ async function incrementarMessagesSent(socketId) {
 async function markVisitDisconnected(socketId) {
   if (!supabase) return;
 
-  await supabase
+  const disconnectedAt = new Date();
+
+  const { data, error: selectError } = await supabase
+    .from('visits')
+    .select('connected_at')
+    .eq('socket_id', socketId)
+    .is('disconnected_at', null)
+    .maybeSingle();
+
+  if (selectError) {
+    console.log(
+      'ERROR AL LEER DURACION:',
+      selectError.message
+    );
+    return;
+  }
+
+  const connectedAt = data?.connected_at
+    ? new Date(data.connected_at)
+    : disconnectedAt;
+
+  const durationMinutes =
+    Math.max(
+      0,
+      Math.round(
+        ((disconnectedAt.getTime() - connectedAt.getTime()) / 60000) * 100
+      ) / 100
+    );
+
+  const { error } = await supabase
     .from('visits')
     .update({
-      disconnected_at: new Date().toISOString(),
+      disconnected_at: disconnectedAt.toISOString(),
+      duration_minutes: durationMinutes,
     })
     .eq('socket_id', socketId)
     .is('disconnected_at', null);
-}
 
+  if (error) {
+    console.log(
+      'ERROR AL GUARDAR DURACION:',
+      error.message
+    );
+  }
+}
 async function saveAnalyticsSnapshot() {
   if (!supabase) return;
 
