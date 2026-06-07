@@ -145,6 +145,14 @@ async function incrementarMatchCount(socketId) {
 
   const nuevoTotal = (data?.match_count || 0) + 1;
 
+
+  console.log(
+    'NEXT COUNT:',
+    socketId,
+    nuevoTotal
+  );
+
+  
   const { error } = await supabase
     .from('visits')
     .update({
@@ -158,7 +166,25 @@ async function incrementarMatchCount(socketId) {
   }
 }
 
+async function incrementarNextCount(socketId) {
+  console.log('INCREMENTANDO NEXT:', socketId);
+  if (!supabase) return;
 
+  const { data } = await supabase
+    .from('visits')
+    .select('next_count')
+    .eq('socket_id', socketId)
+    .is('disconnected_at', null)
+    .maybeSingle();
+
+  const nuevoTotal = (data?.next_count || 0) + 1;
+
+  await supabase
+    .from('visits')
+    .update({ next_count: nuevoTotal })
+    .eq('socket_id', socketId)
+    .is('disconnected_at', null);
+}
 
 async function markVisitDisconnected(socketId) {
   if (!supabase) return;
@@ -441,7 +467,8 @@ if (msgData.count > 8) {
 
 
   //////////////////////////////////////
-  socket.on('next', () => {
+  socket.on('next', async () => {
+    await incrementarNextCount(socket.id);
 
     console.log('NEXT:', socket.id);
   
