@@ -353,6 +353,15 @@ pendingSignalsRef.current = [];
 
         peer.on('stream', (remoteStream) => {
           console.log('REMOTE STREAM RECIBIDO');
+
+          console.log(
+            'TRACKS REMOTOS:',
+            remoteStream.getTracks().map((track) => ({
+              kind: track.kind,
+              enabled: track.enabled,
+              readyState: track.readyState,
+            }))
+          );
         
           setRemoteReady(true);
           attachRemoteStream(remoteStream);
