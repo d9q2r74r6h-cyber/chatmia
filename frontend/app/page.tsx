@@ -451,6 +451,12 @@ export default function Page() {
             >
               👩‍❤️‍👨 Pareja
             </button>
+                      <a
+              href="/auth"
+              className="block text-base font-semibold text-pink-400 underline underline-offset-4"
+            >
+              Crear cuenta / Iniciar sesión
+            </a>
 
             {!ubicacionLista && (
               <div className="text-center text-xs text-white/40 pt-2">
