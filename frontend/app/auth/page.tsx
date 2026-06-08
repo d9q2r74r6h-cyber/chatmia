@@ -79,7 +79,7 @@ export default function AuthPage() {
   };
 
   return (
-    <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
+    <main className="min-h-[100dvh] bg-black text-white flex items-center justify-center px-6 py-8 overflow-y-auto">
       <div className="w-full max-w-md bg-white/[0.03] border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold">
@@ -127,16 +127,16 @@ export default function AuthPage() {
           </button>
         </div>
 
+        <div className="mt-6 text-center">
         <button
-          onClick={() =>
-            setIsLogin(!isLogin)
-          }
-          className="mt-6 text-sm text-white/50 hover:text-white transition w-full"
+          onClick={() => setIsLogin(!isLogin)}
+          className="text-base font-semibold text-pink-400 hover:text-pink-300 underline underline-offset-4 transition"
         >
           {isLogin
-            ? '¿No tienes cuenta? Crear cuenta'
-            : '¿Ya tienes cuenta? Ingresar'}
+            ? 'Crear cuenta nueva'
+            : 'Volver a iniciar sesión'}
         </button>
+      </div>
         <button
   onClick={async () => {
     if (!email) {
