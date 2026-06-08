@@ -533,15 +533,16 @@ clearTimeout(reconnectTimeout.current);
 
     if (!reason) return;
 
-    const {
-      data: { user },
+    const { data: { user },
     } = await supabase.auth.getUser();
 
+    
     await supabase.from('reports').insert({
       reporter_email: user?.email || email || 'guest',
       reported_email: partnerInfo?.email || null,
       reported_guest_id: partnerInfo?.guestId || null,
       reason,
+      status: 'pending',
     });
 
     trackEvent('user_reported', {

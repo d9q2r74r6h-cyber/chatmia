@@ -11,57 +11,48 @@ type Report = {
   reported_email: string | null;
   reported_guest_id: string | null;
   reason: string;
+  status: string | null;
   created_at: string;
 };
-
-
-
-
-
 
 export default function ReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
-  
 
   useEffect(() => {
     fetchReports();
   }, []);
 
-  async function fetchReports() {
+  async function checkAdmin() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user?.email) {
       window.location.href = '/auth';
-      return;
+      return false;
     }
-
-    console.log('ADMIN EMAIL:', user?.email);
 
     const userEmail = user.email.trim().toLowerCase();
 
-    const { data: adminUser, error: adminError } = await supabase
-          .from('admin_users')
-          .select('email')
-          .eq('email', user.email.toLowerCase())
-          .maybeSingle();
+    const { data: adminUser, error } = await supabase
+      .from('admin_users')
+      .select('email')
+      .eq('email', userEmail)
+      .maybeSingle();
 
-        if (adminError || !adminUser) {
-          window.location.href = '/';
-          return;
-        }
-
-    const adminEmails = [
-      'admchatmia@outlook.com',
-      'papiwonka@hotmail.com',
-    ];
-    
-    if (!adminEmails.includes(user.email.toLowerCase())) {
+    if (error || !adminUser) {
       window.location.href = '/';
-      return;
+      return false;
     }
+
+    return true;
+  }
+
+  async function fetchReports() {
+    const isAdmin = await checkAdmin();
+
+    if (!isAdmin) return;
 
     const { data, error } = await supabase
       .from('reports')
@@ -79,16 +70,62 @@ export default function ReportsPage() {
     setLoading(false);
   }
 
+  async function banUser(report: Report) {
+    if (!report.reported_email) {
+      alert('Este reporte no tiene email del usuario reportado.');
+      return;
+    }
+
+    await supabase.from('banned_users').insert({
+      email: report.reported_email,
+      reason: report.reason,
+      shadow_ban: false,
+    });
+
+    await supabase
+      .from('reports')
+      .update({ status: 'reviewed' })
+      .eq('id', report.id);
+
+    fetchReports();
+  }
+
+  async function shadowBanUser(report: Report) {
+    if (!report.reported_email) {
+      alert('Este reporte no tiene email del usuario reportado.');
+      return;
+    }
+
+    await supabase.from('banned_users').insert({
+      email: report.reported_email,
+      reason: report.reason,
+      shadow_ban: true,
+    });
+
+    await supabase
+      .from('reports')
+      .update({ status: 'reviewed' })
+      .eq('id', report.id);
+
+    fetchReports();
+  }
+
+  async function ignoreReport(reportId: number) {
+    await supabase
+      .from('reports')
+      .update({ status: 'ignored' })
+      .eq('id', reportId);
+
+    fetchReports();
+  }
+
   if (loading) {
     return (
-      <div className="p-10 text-white">
+      <div className="min-h-screen bg-black p-10 text-white">
         Cargando reportes...
       </div>
     );
   }
-
-  
-  
 
   return (
     <div className="min-h-screen bg-black text-white p-8">
@@ -102,9 +139,15 @@ export default function ReportsPage() {
             key={report.id}
             className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6"
           >
-            <p className="text-sm text-zinc-400">
-              {new Date(report.created_at).toLocaleString()}
-            </p>
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-sm text-zinc-400">
+                {new Date(report.created_at).toLocaleString()}
+              </p>
+
+              <span className="px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-300 text-xs">
+                {report.status || 'pending'}
+              </span>
+            </div>
 
             <div className="grid md:grid-cols-2 gap-4 my-4">
               <div>
@@ -127,6 +170,29 @@ export default function ReportsPage() {
             <div>
               <p className="text-zinc-400 text-sm mb-1">Motivo</p>
               <p className="font-semibold">{report.reason}</p>
+            </div>
+
+            <div className="flex flex-wrap gap-3 mt-6">
+              <button
+                onClick={() => banUser(report)}
+                className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-xl font-medium transition"
+              >
+                Ban
+              </button>
+
+              <button
+                onClick={() => shadowBanUser(report)}
+                className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-xl font-medium transition"
+              >
+                Shadow Ban
+              </button>
+
+              <button
+                onClick={() => ignoreReport(report.id)}
+                className="bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-xl font-medium transition"
+              >
+                Ignorar
+              </button>
             </div>
           </div>
         ))}
