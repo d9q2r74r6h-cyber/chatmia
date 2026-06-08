@@ -17,9 +17,12 @@ type Report = {
 
 
 
+
+
 export default function ReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  
 
   useEffect(() => {
     fetchReports();
@@ -37,7 +40,25 @@ export default function ReportsPage() {
 
     console.log('ADMIN EMAIL:', user?.email);
 
-    if (user?.email !== 'admchatmia@outlook.com') {
+    const userEmail = user.email.trim().toLowerCase();
+
+    const { data: adminUser, error: adminError } = await supabase
+          .from('admin_users')
+          .select('email')
+          .eq('email', user.email.toLowerCase())
+          .maybeSingle();
+
+        if (adminError || !adminUser) {
+          window.location.href = '/';
+          return;
+        }
+
+    const adminEmails = [
+      'admchatmia@outlook.com',
+      'papiwonka@hotmail.com',
+    ];
+    
+    if (!adminEmails.includes(user.email.toLowerCase())) {
       window.location.href = '/';
       return;
     }
