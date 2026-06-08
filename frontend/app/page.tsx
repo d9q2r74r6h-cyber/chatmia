@@ -414,7 +414,14 @@ export default function Page() {
             </div>
           </div>
 
-
+          <div className="text-center pb-2">
+            <a
+              href="/auth"
+              className="text-pink-400 font-semibold underline underline-offset-4"
+            >
+              Crear cuenta / Iniciar sesión
+            </a>
+          </div>       
           <div className="grid grid-cols-1 gap-3">
             <button
               disabled={!ubicacionLista}
@@ -451,12 +458,7 @@ export default function Page() {
             >
               👩‍❤️‍👨 Pareja
             </button>
-                      <a
-              href="/auth"
-              className="block text-base font-semibold text-pink-400 underline underline-offset-4"
-            >
-              Crear cuenta / Iniciar sesión
-            </a>
+                      
 
             {!ubicacionLista && (
               <div className="text-center text-xs text-white/40 pt-2">
