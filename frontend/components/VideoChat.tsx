@@ -246,6 +246,8 @@ const reconnectTimeout = useRef<any>(null);
         isGuest,
       });
 
+      
+
       socket.on('matched', ({ partnerId, initiator, partner }) => {
         setPartnerInfo(partner || null);
         setRemoteReady(false);
@@ -544,6 +546,8 @@ clearTimeout(reconnectTimeout.current);
       reason,
       status: 'pending',
     });
+
+
 
     trackEvent('user_reported', {
       reason,

@@ -75,18 +75,31 @@ export default function ReportsPage() {
       alert('Este reporte no tiene email del usuario reportado.');
       return;
     }
-
-    await supabase.from('banned_users').insert({
-      email: report.reported_email,
-      reason: report.reason,
-      shadow_ban: false,
-    });
-
-    await supabase
+  
+    const { error: banError } = await supabase
+      .from('banned_users')
+      .insert({
+        email: report.reported_email,
+        reason: report.reason,
+        shadow_ban: false,
+      });
+  
+    if (banError) {
+      alert(`Error al banear: ${banError.message}`);
+      return;
+    }
+  
+    const { error: reportError } = await supabase
       .from('reports')
       .update({ status: 'reviewed' })
       .eq('id', report.id);
-
+  
+    if (reportError) {
+      alert(`Ban guardado, pero error al actualizar reporte: ${reportError.message}`);
+      return;
+    }
+  
+    alert('Usuario baneado correctamente.');
     fetchReports();
   }
 
@@ -95,27 +108,46 @@ export default function ReportsPage() {
       alert('Este reporte no tiene email del usuario reportado.');
       return;
     }
-
-    await supabase.from('banned_users').insert({
-      email: report.reported_email,
-      reason: report.reason,
-      shadow_ban: true,
-    });
-
-    await supabase
+  
+    const { error: banError } = await supabase
+      .from('banned_users')
+      .insert({
+        email: report.reported_email,
+        reason: report.reason,
+        shadow_ban: true,
+      });
+  
+    if (banError) {
+      alert(`Error al aplicar shadow ban: ${banError.message}`);
+      return;
+    }
+  
+    const { error: reportError } = await supabase
       .from('reports')
       .update({ status: 'reviewed' })
       .eq('id', report.id);
-
+  
+    if (reportError) {
+      alert(`Shadow ban guardado, pero error al actualizar reporte: ${reportError.message}`);
+      return;
+    }
+  
+    alert('Shadow ban aplicado correctamente.');
     fetchReports();
   }
 
   async function ignoreReport(reportId: number) {
-    await supabase
+    const { error } = await supabase
       .from('reports')
       .update({ status: 'ignored' })
       .eq('id', reportId);
-
+  
+    if (error) {
+      alert(`Error al ignorar reporte: ${error.message}`);
+      return;
+    }
+  
+    alert('Reporte ignorado.');
     fetchReports();
   }
 
@@ -163,6 +195,9 @@ export default function ReportsPage() {
                   {report.reported_email ||
                     report.reported_guest_id ||
                     'desconocido'}
+                </p>
+                <p className="text-red-400 text-xs">
+                  EMAIL: {report.reported_email || 'NULL'}
                 </p>
               </div>
             </div>
