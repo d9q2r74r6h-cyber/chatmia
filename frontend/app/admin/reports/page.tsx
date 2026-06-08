@@ -76,17 +76,45 @@ export default function ReportsPage() {
       return;
     }
   
-    const { error: banError } = await supabase
-      .from('banned_users')
-      .upsert({
-        email: report.reported_email,
-        reason: report.reason,
-        shadow_ban: false,
-      });
+    const email = report.reported_email.trim().toLowerCase();
   
-    if (banError) {
-      alert(`Error al banear: ${banError.message}`);
+    const { data: existingBan, error: findError } = await supabase
+      .from('banned_users')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+  
+    if (findError) {
+      alert(`Error al buscar usuario baneado: ${findError.message}`);
       return;
+    }
+  
+    if (existingBan) {
+      const { error: updateError } = await supabase
+        .from('banned_users')
+        .update({
+          reason: report.reason,
+          shadow_ban: false,
+        })
+        .eq('id', existingBan.id);
+  
+      if (updateError) {
+        alert(`Error al actualizar ban: ${updateError.message}`);
+        return;
+      }
+    } else {
+      const { error: insertError } = await supabase
+        .from('banned_users')
+        .insert({
+          email,
+          reason: report.reason,
+          shadow_ban: false,
+        });
+  
+      if (insertError) {
+        alert(`Error al banear: ${insertError.message}`);
+        return;
+      }
     }
   
     const { error: reportError } = await supabase
@@ -95,7 +123,7 @@ export default function ReportsPage() {
       .eq('id', report.id);
   
     if (reportError) {
-      alert(`Ban guardado, pero error al actualizar reporte: ${reportError.message}`);
+      alert(`Ban aplicado, pero error al actualizar reporte: ${reportError.message}`);
       return;
     }
   
@@ -109,17 +137,45 @@ export default function ReportsPage() {
       return;
     }
   
-    const { error: banError } = await supabase
-      .from('banned_users')
-      .upsert({
-        email: report.reported_email,
-        reason: report.reason,
-        shadow_ban: true,
-      });
+    const email = report.reported_email.trim().toLowerCase();
   
-    if (banError) {
-      alert(`Error al aplicar shadow ban: ${banError.message}`);
+    const { data: existingBan, error: findError } = await supabase
+      .from('banned_users')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+  
+    if (findError) {
+      alert(`Error al buscar usuario baneado: ${findError.message}`);
       return;
+    }
+  
+    if (existingBan) {
+      const { error: updateError } = await supabase
+        .from('banned_users')
+        .update({
+          reason: report.reason,
+          shadow_ban: true,
+        })
+        .eq('id', existingBan.id);
+  
+      if (updateError) {
+        alert(`Error al actualizar shadow ban: ${updateError.message}`);
+        return;
+      }
+    } else {
+      const { error: insertError } = await supabase
+        .from('banned_users')
+        .insert({
+          email,
+          reason: report.reason,
+          shadow_ban: true,
+        });
+  
+      if (insertError) {
+        alert(`Error al aplicar shadow ban: ${insertError.message}`);
+        return;
+      }
     }
   
     const { error: reportError } = await supabase
@@ -128,7 +184,7 @@ export default function ReportsPage() {
       .eq('id', report.id);
   
     if (reportError) {
-      alert(`Shadow ban guardado, pero error al actualizar reporte: ${reportError.message}`);
+      alert(`Shadow ban aplicado, pero error al actualizar reporte: ${reportError.message}`);
       return;
     }
   
