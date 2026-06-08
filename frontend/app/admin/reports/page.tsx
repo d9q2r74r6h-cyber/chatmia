@@ -78,7 +78,7 @@ export default function ReportsPage() {
   
     const { error: banError } = await supabase
       .from('banned_users')
-      .insert({
+      .upsert({
         email: report.reported_email,
         reason: report.reason,
         shadow_ban: false,
@@ -111,7 +111,7 @@ export default function ReportsPage() {
   
     const { error: banError } = await supabase
       .from('banned_users')
-      .insert({
+      .upsert({
         email: report.reported_email,
         reason: report.reason,
         shadow_ban: true,
