@@ -147,6 +147,13 @@ export default function Page() {
 
     setUser(user);
 
+    await supabase
+      .from('profiles')
+      .update({
+        last_visit_at: new Date().toISOString(),
+      })
+      .eq('id', user.id);
+
     const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
