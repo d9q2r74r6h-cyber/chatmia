@@ -6,6 +6,8 @@ const cors = require('cors');
 const { Server } = require('socket.io');
 const { createClient } = require('@supabase/supabase-js');
 
+
+
 const app = express();
 
 app.use(cors());
@@ -76,6 +78,8 @@ function emitAdminStats() {
 
 async function saveVisit(socket, data = {}) {
 
+  
+
   console.log('SAVE VISIT:', socket.id, data);
 
   if (!supabase) {
@@ -101,6 +105,10 @@ async function saveVisit(socket, data = {}) {
 
     region: data.region || null,
     city: data.city || null,
+
+    visit_date: new Date().toISOString().slice(0, 10),
+    visit_time: new Date().toISOString(),
+    last_seen_at: new Date().toISOString(),
 
     user_agent:
       socket.handshake.headers['user-agent'] || null,

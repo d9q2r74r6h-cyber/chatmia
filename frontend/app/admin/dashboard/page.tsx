@@ -111,6 +111,9 @@ export default function DashboardPage() {
             duration_minutes,
             connected_at,
             disconnected_at
+            visit_date,
+            visit_time,
+            last_seen_at,
           `)
           .order('connected_at', { ascending: false })
           .limit(50),
@@ -260,8 +263,10 @@ export default function DashboardPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="text-zinc-400">
-                <th className="pb-4">Hora</th>
+                <tr className="text-zinc-400">
+                <th className="pb-4">Fecha</th>
+                <th className="pb-4">Hora visita</th>
+                <th className="pb-4">Última actividad online</th>
                 <th className="pb-4">País</th>
                 <th className="pb-4">Región</th>
                 <th className="pb-4">Ciudad</th>
@@ -300,6 +305,21 @@ export default function DashboardPage() {
                     })}
                   </td>
 
+                  <td className="py-3">
+                    {visit.visit_date || '—'}
+                  </td>
+
+                  <td className="py-3">
+                    {visit.visit_time
+                      ? String(visit.visit_time).slice(0, 8)
+                      : '—'}
+                  </td>
+
+                  <td className="py-3">
+                    {visit.last_seen_at
+                      ? new Date(visit.last_seen_at).toLocaleString('es-CL')
+                      : '—'}
+                  </td>
                   <td>{visit.flag || ''} {visit.country || '—'}</td>
                   <td>{visit.region || '—'}</td>
                   <td>{visit.city || '—'}</td>
