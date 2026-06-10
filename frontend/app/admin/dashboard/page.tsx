@@ -297,6 +297,9 @@ export default function DashboardPage() {
                   className="border-t border-zinc-800"
                 >
                   <td className="py-3">
+                    {visit.visit_date || '—'}
+                  </td>
+                  <td className="py-3">
                     {new Date(
                       visit.connected_at
                     ).toLocaleTimeString('es-CL', {
@@ -305,9 +308,7 @@ export default function DashboardPage() {
                     })}
                   </td>
 
-                  <td className="py-3">
-                    {visit.visit_date || '—'}
-                  </td>
+                  
 
                   <td className="py-3">
                     {visit.visit_time
