@@ -110,10 +110,10 @@ export default function DashboardPage() {
             messages_sent,
             duration_minutes,
             connected_at,
-            disconnected_at
+            disconnected_at,
             visit_date,
             visit_time,
-            last_seen_at,
+            last_seen_at
           `)
           .order('connected_at', { ascending: false })
           .limit(50),
