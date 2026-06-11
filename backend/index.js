@@ -326,17 +326,19 @@ io.on('connection', (socket) => {
     
 
     if (!socket.visitSaved) { 
-      await saveVisit(socket, {
-    email,
-    guestId,
-    isGuest,
-    gender,
-    country: country?.name || null,
-    flag: country?.flag || '',
-    region: region || null,
-    city: city || null,
-    userId: userId || null,
-  });
+      saveVisit(socket, {
+        email,
+        guestId,
+        isGuest,
+        gender,
+        country: country?.name || null,
+        flag: country?.flag || '',
+        region: region || null,
+        city: city || null,
+        userId: userId || null,
+      }).catch(console.error);
+      
+      socket.visitSaved = true;
 
   socket.visitSaved = true;
   console.log(
