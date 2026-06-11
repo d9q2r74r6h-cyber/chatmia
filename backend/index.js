@@ -84,34 +84,40 @@ async function saveVisit(socket, data = {}) {
     return;
   }
 
-  const now = new Date();
+  const { error } = await supabase
+  .from('visits')
+  .insert({
+    guest_id: data.guestId || null,
 
-  const { error } = await supabase.from('visits')
-    .insert({
-      guest_id: data.guestId || null,
+    is_guest:
+      data.isGuest === undefined
+        ? !data.email
+        : data.isGuest,
 
-      is_guest:
-        data.isGuest === undefined
-          ? !data.email
-          : data.isGuest,
+    socket_id: socket.id,
+    email: data.email || null,
 
-      socket_id: socket.id,
-      email: data.email || null,
+    gender: data.gender || null,
+    country: data.country || null,
+    flag: data.flag || '',
 
-      gender: data.gender || null,
-      country: data.country || null,
-      flag: data.flag || '',
+    region: data.region || null,
+    city: data.city || null,
 
-      region: data.region || null,
-      city: data.city || null,
+    visit_date: now.toISOString().slice(0, 10),
+    visit_time: now.toISOString().slice(11, 19),
+    last_seen_at: now.toISOString(),
 
-      visit_date: now.toISOString().slice(0, 10),
-      visit_time: now.toISOString().slice(11, 19),
-      last_seen_at: now.toISOString(),
+    user_agent:
+      socket.handshake.headers['user-agent'] || null,
+  });
 
-      user_agent:
-        socket.handshake.headers['user-agent'] || null,
-    });
+if (error) {
+  console.log('SAVE VISIT ERROR:', error.message);
+} else {
+  console.log('VISIT SAVED');
+}
+}
 
 async function markVisitMatched(socketId) {
   if (!supabase) return;
