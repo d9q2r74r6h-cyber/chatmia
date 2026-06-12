@@ -231,12 +231,12 @@ export default function DashboardPage() {
       </h1>
 
       <div className="mb-6">
-      <Link
+      <a
           href="/admin/dashboard"
           className="inline-flex items-center rounded-xl border border-zinc-700 px-4 py-2 text-sm text-white hover:bg-zinc-800 transition"
         >
           🔄 Recargar Datos
-        </Link>
+        </a>
     </div>
 
       <CardGrid cards={realtimeCards} variant="pink" />
