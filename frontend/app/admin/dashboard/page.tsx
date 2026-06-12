@@ -232,12 +232,11 @@ export default function DashboardPage() {
 
       <div className="mb-6">
       <Link
-        href="/admin/dashboard"
-        className="inline-flex items-center rounded-xl border border-zinc-700 px-4 py-2 text-sm text-white hover:bg-zinc-800 transition"
-      >
-        <RefreshCwIcon className="h-6 w-6" />
-        Recargar datos   
-         </Link>
+          href="/admin/dashboard"
+          className="inline-flex items-center rounded-xl border border-zinc-700 px-4 py-2 text-sm text-white hover:bg-zinc-800 transition"
+        >
+          🔄 Recargar Datos
+        </Link>
     </div>
 
       <CardGrid cards={realtimeCards} variant="pink" />
