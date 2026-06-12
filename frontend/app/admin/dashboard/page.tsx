@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -227,6 +228,15 @@ export default function DashboardPage() {
       <h1 className="mb-8 text-4xl font-black">
         Admin Dashboard
       </h1>
+
+      <div className="mb-6">
+      <Link
+        href="/"
+        className="inline-flex items-center rounded-xl border border-zinc-700 px-4 py-2 text-sm text-white hover:bg-zinc-800 transition"
+      >
+        ← Volver
+      </Link>
+    </div>
 
       <CardGrid cards={realtimeCards} variant="pink" />
       <CardGrid cards={moderationCards} variant="zinc" />
