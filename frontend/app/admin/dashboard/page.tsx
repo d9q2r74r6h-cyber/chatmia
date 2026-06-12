@@ -263,64 +263,51 @@ export default function DashboardPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-                <tr className="text-zinc-400">
-                <th className="pb-4">Fecha</th>
-                <th className="pb-4">Hora visita</th>
-                <th className="pb-4">Última actividad online</th>
-                <th className="pb-4">País</th>
-                <th className="pb-4">Región</th>
-                <th className="pb-4">Ciudad</th>
-                <th className="pb-4">Género</th>
-                <th className="pb-4">Matches</th>
-                <th className="pb-4">Nexts</th>
-                <th className="pb-4">Mensajes</th>
-                <th className="pb-4">Duración</th>
-                <th className="pb-4">Usuario</th>
-              </tr>
+            <tr className="text-zinc-400">
+            <th className="pb-4">Entrada</th>
+            <th className="pb-4">País</th>
+            <th className="pb-4">Región</th>
+            <th className="pb-4">Ciudad</th>
+            <th className="pb-4">Género</th>
+            <th className="pb-4">Matches</th>
+            <th className="pb-4">Nexts</th>
+            <th className="pb-4">Mensajes</th>
+            <th className="pb-4">Duración</th>
+            <th className="pb-4">Usuario</th>
+          </tr>
             </thead>
 
             <tbody>
-              {lastVisits.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={12}
-                    className="border-t border-zinc-800 py-6 text-center text-zinc-500"
-                  >
-                    No hay visitas todavía.
-                  </td>
-                </tr>
-              )}
+  {lastVisits.map((visit) => (
+    <tr
+      key={visit.id}
+      className="border-t border-zinc-800"
+    >
+      <td className="py-3">
+        {visit.last_seen_at
+          ? new Date(visit.last_seen_at).toLocaleString(
+              'es-CL',
+              {
+                timeZone: 'America/Santiago',
+                dateStyle: 'short',
+                timeStyle: 'short',
+              }
+            )
+          : '—'}
+      </td>
 
-              {lastVisits.map((visit) => (
-                <tr>
-                <td className="py-3">
-                {visit.visit_date || '—'}
-              </td>
-              
-              <td className="py-3">
-                {visit.visit_time
-                  ? String(visit.visit_time).slice(0, 8)
-                  : '—'}
-              </td>
-              
-              <td className="py-3">
-                {visit.last_seen_at
-                  ? new Date(visit.last_seen_at).toLocaleString('es-CL')
-                  : '—'}
-              </td>
-              
-              <td>{visit.flag || ''} {visit.country || '—'}</td>
-              <td>{visit.region || '—'}</td>
-              <td>{visit.city || '—'}</td>
-              <td>{visit.gender || '—'}</td>
-              <td>{visit.match_count || 0}</td>
-              <td>{visit.next_count || 0}</td>
-              <td>{visit.messages_sent || 0}</td>
-              <td>{visit.duration_minutes || 0} min</td>
-              <td>{visit.email || 'Invitado'}</td>
-              </tr>
-              ))}
-            </tbody>
+      <td>{visit.flag || ''} {visit.country || '—'}</td>
+      <td>{visit.region || '—'}</td>
+      <td>{visit.city || '—'}</td>
+      <td>{visit.gender || '—'}</td>
+      <td>{visit.match_count || 0}</td>
+      <td>{visit.next_count || 0}</td>
+      <td>{visit.messages_sent || 0}</td>
+      <td>{visit.duration_minutes || 0} min</td>
+      <td>{visit.email || 'Invitado'}</td>
+    </tr>
+  ))}
+</tbody>
           </table>
         </div>
       </section>
