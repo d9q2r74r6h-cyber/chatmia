@@ -47,19 +47,23 @@ export default function AdminLayout({
   const links = [
     {
       href: '/admin/dashboard',
-      label: 'Dashboard',
+      label: 'Panel',
     },
     {
       href: '/admin/users',
-      label: 'Users',
+      label: 'Usuarios',
     },
     {
       href: '/admin/reports',
-      label: 'Reports',
+      label: 'Reportes',
     },
     {
       href: '/admin/messages',
-      label: 'Messages',
+      label: 'Mensajes',
+    },
+    {
+      href: '/',
+      label: 'Volver al Chat',
     },
   ];
 
@@ -74,9 +78,9 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-black text-white flex">
       <aside className="w-64 border-r border-white/10 bg-zinc-950 p-5 hidden md:block">
-        <h1 className="text-2xl font-bold mb-8">
-          ChatMia Admin
-        </h1>
+      <h1 className="text-2xl font-bold mb-8">
+        Panel de Administración
+      </h1>
 
         <nav className="space-y-2">
           {links.map((link) => {

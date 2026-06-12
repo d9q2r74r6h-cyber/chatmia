@@ -29,7 +29,7 @@ type Props = {
             font-bold
             mb-5
           ">
-            Statistics
+            Estadísticas
           </h3>
   
           <div className="
@@ -45,7 +45,7 @@ type Props = {
               <span className="
                 text-zinc-400
               ">
-                Online Users
+                Usuarios en Línea
               </span>
   
               <span className="
@@ -86,7 +86,7 @@ type Props = {
               <span className="
                 text-zinc-400
               ">
-                Country
+                País
               </span>
   
               <span className="
@@ -114,7 +114,7 @@ type Props = {
             font-bold
             mb-5
           ">
-            Community Rules
+            Reglas de la Comunidad
           </h3>
   
           <div className="
@@ -124,19 +124,19 @@ type Props = {
           ">
   
             <p>
-              • Respect other users
+              • Respetar a otros usuarios
             </p>
   
             <p>
-              • No harassment
+              • No hacer acoso
             </p>
   
             <p>
-              • No nudity
+              • No desnudez
             </p>
   
             <p>
-              • Keep conversations friendly
+              • Mantener las conversaciones amistosas
             </p>
   
           </div>
@@ -165,8 +165,8 @@ type Props = {
             text-zinc-300
             mb-5
           ">
-            Unlock gender filters,
-            HD quality and private rooms.
+            Desbloquear filtros de género,
+            calidad HD y salas privadas.
           </p>
   
           <button className="
@@ -178,7 +178,7 @@ type Props = {
             rounded-2xl
             font-bold
           ">
-            Upgrade
+            Actualizar
           </button>
   
         </div>
