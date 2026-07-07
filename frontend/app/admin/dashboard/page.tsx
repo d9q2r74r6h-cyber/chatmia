@@ -36,6 +36,16 @@ type Visit = {
   last_seen_at: string | null;
 };
 
+type ProfileVisit = {
+  id: string;
+  email: string | null;
+  username: string | null;
+  country: string | null;
+  role: string | null;
+  created_at: string | null;
+  last_visit_at: string | null;
+};
+
 export default function DashboardPage() {
   const [stats, setStats] = useState({
     reports: 0,
@@ -63,9 +73,10 @@ export default function DashboardPage() {
 
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
   const [lastVisits, setLastVisits] = useState<Visit[]>([]);
+  const [lastProfiles, setLastProfiles] = useState<ProfileVisit[]>([]);
 
   async function loadDashboard() {
-    const [reportsRes, flaggedRes, bansRes, messagesRes, visitsRes] =
+    const [reportsRes, flaggedRes, bansRes, messagesRes, visitsRes, profilesRes] =
       await Promise.all([
         supabase
           .from('reports')
@@ -109,6 +120,12 @@ export default function DashboardPage() {
             last_seen_at
           `)
           .order('connected_at', { ascending: false })
+          .limit(50),
+
+        supabase
+          .from('profiles')
+          .select('id,email,username,country,role,created_at,last_visit_at')
+          .order('created_at', { ascending: false })
           .limit(50),
       ]);
 
@@ -163,6 +180,7 @@ export default function DashboardPage() {
     });
 
     setLastVisits(visits);
+    setLastProfiles((profilesRes.data || []) as ProfileVisit[]);
 
     await loadChartData();
   }
@@ -290,9 +308,48 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      <section className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+        <h2 className="mb-6 text-2xl font-semibold">
+          Ultimos registros / ingresos
+        </h2>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="text-zinc-400">
+                <th className="pb-4">Registro</th>
+                <th className="pb-4">Ultimo ingreso</th>
+                <th className="pb-4">Email</th>
+                <th className="pb-4">Usuario</th>
+                <th className="pb-4">Pais</th>
+                <th className="pb-4">Rol</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {lastProfiles.map((profile) => (
+                <tr
+                  key={profile.id}
+                  className="border-t border-zinc-800"
+                >
+                  <td className="py-3">
+                    {formatChileDate(profile.created_at)}
+                  </td>
+                  <td>{formatChileDate(profile.last_visit_at)}</td>
+                  <td>{profile.email || 'Sin email'}</td>
+                  <td>{profile.username || 'Sin usuario'}</td>
+                  <td>{profile.country || 'Sin pais'}</td>
+                  <td>{profile.role || 'user'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
         <h2 className="mb-6 text-2xl font-semibold">
-          Últimas Visitas
+          Ultimas sesiones de videochat
         </h2>
 
         <div className="overflow-x-auto">
@@ -380,4 +437,14 @@ function CardGrid({
       ))}
     </div>
   );
+}
+
+function formatChileDate(value: string | null) {
+  if (!value) return '-';
+
+  return new Date(value).toLocaleString('es-CL', {
+    timeZone: 'America/Santiago',
+    dateStyle: 'short',
+    timeStyle: 'short',
+  });
 }
