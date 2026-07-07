@@ -30,6 +30,8 @@ type LocationInfo = {
   source: 'browser' | 'ip';
 };
 
+type LocationStatus = 'detecting' | 'browser' | 'ip' | 'manual' | 'fallback';
+
 const fetchJsonWithTimeout = async (
   url: string,
   timeoutMs: number
@@ -146,6 +148,9 @@ export default function Page() {
       city: '',
     });
 
+    const [locationStatus, setLocationStatus] =
+      useState<LocationStatus>('detecting');
+
     const ubicacionLista = !!country.name;    
       
     
@@ -173,6 +178,7 @@ export default function Page() {
           region: detectedLocation.region || '',
           city: detectedLocation.city || '',
         });
+        setLocationStatus(detectedLocation.source);
 
         const detected = countries.find(
           (item) => item.code === detectedLocation.countryCode
@@ -202,6 +208,7 @@ export default function Page() {
         }
       } catch (err) {
         console.error('IP location failed', err);
+        setLocationStatus('fallback');
       }
     };
   
@@ -314,6 +321,22 @@ export default function Page() {
   
     return guestId;
   }
+
+  const updateCountry = (countryCode: string) => {
+    const selectedCountry =
+      countries.find((item) => item.code === countryCode) || countries[0];
+
+    setCountry(selectedCountry);
+    setLocationStatus('manual');
+  };
+
+  const updateLocation = (field: 'region' | 'city', value: string) => {
+    setLocation((currentLocation) => ({
+      ...currentLocation,
+      [field]: value,
+    }));
+    setLocationStatus('manual');
+  };
 
   
   const enterChat = (selectedGender: string) => {
@@ -492,10 +515,6 @@ export default function Page() {
             </div>
           </div>
 
-          <div>
-           
-          </div>
-
           <div className="space-y-2">
             <div className="text-sm text-white/60">
               Camara
@@ -523,6 +542,58 @@ export default function Page() {
               >
                 📷 Trasera
               </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm text-white/60">
+                Ubicacion
+              </div>
+
+              <div className="text-xs text-white/35">
+                {locationStatus === 'detecting'
+                  ? 'Detectando...'
+                  : locationStatus === 'browser'
+                  ? 'Detectada por navegador'
+                  : locationStatus === 'ip'
+                  ? 'Detectada por IP'
+                  : locationStatus === 'manual'
+                  ? 'Editada manualmente'
+                  : 'Modo global'}
+              </div>
+            </div>
+
+            <select
+              value={country.code}
+              onChange={(event) => updateCountry(event.target.value)}
+              className="w-full h-12 rounded-2xl bg-white/5 border border-white/10 px-4 outline-none text-white"
+            >
+              {countries.map((item) => (
+                <option key={item.code} value={item.code} className="bg-black">
+                  {item.flag} {item.name}
+                </option>
+              ))}
+            </select>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                value={location.region}
+                onChange={(event) =>
+                  updateLocation('region', event.target.value)
+                }
+                placeholder="Region opcional"
+                className="h-12 rounded-2xl bg-white/5 border border-white/10 px-4 outline-none text-sm"
+              />
+
+              <input
+                value={location.city}
+                onChange={(event) =>
+                  updateLocation('city', event.target.value)
+                }
+                placeholder="Ciudad opcional"
+                className="h-12 rounded-2xl bg-white/5 border border-white/10 px-4 outline-none text-sm"
+              />
             </div>
           </div>
 
@@ -566,7 +637,7 @@ export default function Page() {
 
             {(!location.region || !location.city) && (
               <div className="text-center text-xs text-white/40 pt-2">
-                🌎 Puedes entrar ahora. Ubicacion precisa aun no detectada.
+                🌎 Puedes entrar ahora. Puedes completar ciudad o region si quieres afinar tu perfil.
               </div>
             )}
           </div>
