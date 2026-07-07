@@ -95,9 +95,6 @@ const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [cameraEnabled, setCameraEnabled] = useState(true);
 
   const [partnerInfo, setPartnerInfo] = useState<PartnerInfo | null>(null);
-  const searchPlace =
-    country.code === 'WW' ? 'modo global' : country.name;
-  const searchDetail = city || region || searchPlace;
 
   async function loadIceServers(socketUrl: string): Promise<RTCIceServer[]> {
     try {
@@ -689,13 +686,7 @@ const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
               </div>
 
               <div className="text-sm text-white/40 mt-2">
-                {country.code === 'WW'
-                  ? 'Conectando alrededor del mundo'
-                  : `Buscando desde ${searchDetail}`}
-              </div>
-
-              <div className="text-xs text-white/30 mt-3">
-                Si demora, prueba cambiar a modo global desde la pantalla inicial.
+                Conectando alrededor del mundo
               </div>
             </div>
           </div>
