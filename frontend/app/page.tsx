@@ -7,6 +7,7 @@ import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 
 const countries = [
+  { code: 'WW', name: 'Worldwide', flag: '🌎' },
   { code: 'CL', name: 'Chile', flag: '🇨🇱' },
   { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
   { code: 'BR', name: 'Brasil', flag: '🇧🇷' },
@@ -28,8 +29,8 @@ export default function Page() {
     useState<'user' | 'environment'>('user');
 
     const [country, setCountry] = useState({
-      code: '',
-      name: '',
+      code: 'WW',
+      name: 'Worldwide',
       flag: '🌎',
     });
     
@@ -38,10 +39,7 @@ export default function Page() {
       city: '',
     });
 
-    const ubicacionLista =
-  !!country.name &&
-  !!location.region &&
-  !!location.city;    
+    const ubicacionLista = !!country.name;    
       
     
   
@@ -57,7 +55,12 @@ export default function Page() {
   useEffect(() => {
     const loadLocation = async () => {
       try {
-        const response = await fetch('https://ipapi.co/json/');
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 3500);
+        const response = await fetch('https://ipapi.co/json/', {
+          signal: controller.signal,
+        });
+        window.clearTimeout(timeout);
         const data = await response.json();
   
         console.log('LOCATION', data.city, data.region);
@@ -166,7 +169,12 @@ export default function Page() {
       setProfile(profileData);
     }
     try {
-      const response = await fetch('https://ipapi.co/json/');
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 3500);
+      const response = await fetch('https://ipapi.co/json/', {
+        signal: controller.signal,
+      });
+      window.clearTimeout(timeout);
       const data = await response.json();
 
       setLocation({
@@ -217,13 +225,6 @@ export default function Page() {
       region: location.region,
       city: location.city,
     });
-  
-    if (!country.name || !location.region || !location.city) {
-      alert(
-        'Estamos detectando tu ubicacion. Intenta nuevamente en unos segundos.'
-      );
-      return;
-    }
   
     setEntering(true);
   
@@ -466,9 +467,9 @@ export default function Page() {
             </button>
                       
 
-            {!ubicacionLista && (
+            {(!location.region || !location.city) && (
               <div className="text-center text-xs text-white/40 pt-2">
-                🌎 Detectando tu ubicación...
+                🌎 Puedes entrar ahora. Ubicacion precisa aun no detectada.
               </div>
             )}
           </div>
