@@ -7,6 +7,7 @@ type Report = {
   id: number;
   created_at: string;
   reporter_email: string;
+  reported_email: string | null;
   reason: string;
 };
 
@@ -23,7 +24,7 @@ type Event = {
   created_at: string;
   user_email: string;
   event_name: string;
-  metadata: any;
+  metadata: unknown;
 };
 
 type ActiveChat = {
@@ -47,11 +48,7 @@ export default function AdminPage() {
   const [activeChats, setActiveChats] = useState<ActiveChat[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  async function loadData() {
     setLoading(true);
 
     const reportsResult = await supabase
@@ -80,7 +77,12 @@ export default function AdminPage() {
     if (activeChatsResult.data) setActiveChats(activeChatsResult.data);
 
     setLoading(false);
-  };
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(loadData, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const banEmail = async (email: string, reason: string) => {
     if (!email) return;
@@ -274,9 +276,14 @@ export default function AdminPage() {
                         </div>
 
                         <button
-                          onClick={() =>
-                            banEmail(report.reporter_email, report.reason)
-                          }
+                          onClick={() => {
+                            if (!report.reported_email) {
+                              alert('Este reporte no tiene email reportado.');
+                              return;
+                            }
+
+                            banEmail(report.reported_email, report.reason);
+                          }}
                           className="px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 font-medium"
                         >
                           Banear email
@@ -324,7 +331,7 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      {event.metadata && (
+                      {event.metadata != null && (
                         <pre className="mt-3 text-xs text-white/50 bg-black/40 rounded-xl p-3 overflow-x-auto">
                           {JSON.stringify(event.metadata, null, 2)}
                         </pre>

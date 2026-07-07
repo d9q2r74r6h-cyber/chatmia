@@ -11,11 +11,7 @@ export default function ProfilePage() {
   const [country, setCountry] = useState('');
   const [interests, setInterests] = useState('');
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
+  async function loadProfile() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -41,7 +37,12 @@ export default function ProfilePage() {
     }
 
     setLoading(false);
-  };
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(loadProfile, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const saveProfile = async () => {
     const {

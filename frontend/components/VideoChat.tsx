@@ -32,6 +32,16 @@ type Message = {
   mine: boolean;
 };
 
+type PartnerInfo = {
+  email?: string | null;
+  guestId?: string | null;
+  gender?: string | null;
+  country?: string | null;
+  flag?: string | null;
+  region?: string | null;
+  city?: string | null;
+};
+
 export default function VideoChat({
   gender,
   country,
@@ -48,24 +58,24 @@ export default function VideoChat({
 
   const hasTrackedConnection = useRef(false);
   const isManualNext = useRef(false);
-const reconnectTimeout = useRef<any>(null);
+const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const localVideoMobile = useRef<HTMLVideoElement>(null);
   const localVideoDesktop = useRef<HTMLVideoElement>(null);
   const remoteVideoMobile = useRef<HTMLVideoElement>(null);
   const remoteVideoDesktop = useRef<HTMLVideoElement>(null);
 
-  const socketRef = useRef<any>(null);
+  const socketRef = useRef<ReturnType<typeof io> | null>(null);
   const peerRef = useRef<Peer.Instance | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   const matchSound = useRef<HTMLAudioElement | null>(null);
   const messageSound = useRef<HTMLAudioElement | null>(null);
 
-  const typingTimeout = useRef<any>(null);
-  const remoteStreamTimeout = useRef<any>(null);
-  const statsInterval = useRef<any>(null);
-  const lastRemoteTrackTime = useRef(Date.now());
+  const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const remoteStreamTimeout = useRef<ReturnType<typeof setInterval> | null>(null);
+  const statsInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastRemoteTrackTime = useRef(0);
 
   const [online, setOnline] = useState(0);
   const [connecting, setConnecting] = useState(true);
@@ -84,7 +94,22 @@ const reconnectTimeout = useRef<any>(null);
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
 
-  const [partnerInfo, setPartnerInfo] = useState<any>(null);
+  const [partnerInfo, setPartnerInfo] = useState<PartnerInfo | null>(null);
+
+  async function loadIceServers(socketUrl: string): Promise<RTCIceServer[]> {
+    try {
+      const response = await fetch(`${socketUrl.replace(/\/$/, '')}/ice-servers`);
+
+      if (!response.ok) throw new Error('ICE configuration unavailable');
+
+      const data = (await response.json()) as { iceServers?: RTCIceServer[] };
+      return data.iceServers?.length
+        ? data.iceServers
+        : [{ urls: 'stun:global.stun.twilio.com:3478' }];
+    } catch {
+      return [{ urls: 'stun:global.stun.twilio.com:3478' }];
+    }
+  }
 
   useEffect(() => {
     const checkBan = async () => {
@@ -138,10 +163,18 @@ const reconnectTimeout = useRef<any>(null);
       matchSound.current = new Audio('/sounds/match.mp3');
       messageSound.current = new Audio('/sounds/message.mp3');
 
-      const socket = io(
-        process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000',
-        { transports: ['websocket'] }
-      );
+      const socketUrl =
+        process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const socket = io(socketUrl, {
+        transports: ['websocket'],
+        auth: {
+          accessToken: session?.access_token || null,
+        },
+      });
 
       socketRef.current = socket;
 
@@ -177,7 +210,7 @@ const reconnectTimeout = useRef<any>(null);
       socket.on('typing', () => {
         setTyping(true);
       
-        clearTimeout(typingTimeout.current);
+        if (typingTimeout.current) clearTimeout(typingTimeout.current);
       
         typingTimeout.current = setTimeout(() => {
           setTyping(false);
@@ -192,6 +225,11 @@ const reconnectTimeout = useRef<any>(null);
         alert(data.reason);
       });
 
+      socket.on('banned', () => {
+        alert('Tu cuenta ha sido suspendida de ChatMia.');
+        window.location.href = '/auth';
+      });
+
       socket.on('partner-left', async () => {
         hasTrackedConnection.current = false;
         setPartnerInfo(null);
@@ -204,15 +242,9 @@ const reconnectTimeout = useRef<any>(null);
         setConnected(false);
         setConnecting(true);
 
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        
         socket.emit('find-partner', {
         gender,
         country,
-        email: email || user?.email || null,
-        userId: user?.id || null,
         guestId,
         isGuest,
         region,
@@ -230,45 +262,32 @@ const reconnectTimeout = useRef<any>(null);
       streamRef.current = stream;
       attachLocalStream(stream);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      
       socket.emit('find-partner', {
         gender,
         country,
         region,
         city,
-        email: email || user?.email || null,
-        userId: user?.id || null,
-      
         guestId,
         isGuest,
       });
 
       
 
-      socket.on('matched', ({ partnerId, initiator, partner }) => {
+      socket.on('matched', async ({ partnerId, initiator, partner }) => {
         setPartnerInfo(partner || null);
         setRemoteReady(false);
         setConnecting(false);
 
         peerRef.current?.destroy();
 
+        const iceServers = await loadIceServers(socketUrl);
+
         const peer = new Peer({
           initiator,
           trickle: true,
           stream,
           config: {
-          
-            iceServers: [
-              { urls: 'stun:global.stun.twilio.com:3478' },
-              {
-                urls: 'turn:global.relay.metered.ca:80',
-                username: 'admchatmia@outlook.com',
-                credential: 'Osorno69#',
-              },
-            ],
+            iceServers,
           },
         });
 
@@ -308,17 +327,17 @@ const reconnectTimeout = useRef<any>(null);
           setConnecting(false);
           setConnected(true);
 
-          clearInterval(statsInterval.current);
+          if (statsInterval.current) clearInterval(statsInterval.current);
 
           statsInterval.current = setInterval(async () => {
             try {
-              const pc = (peer as any)._pc;
+              const pc = (peer as unknown as { _pc?: RTCPeerConnection })._pc;
               if (!pc) return;
 
               const stats = await pc.getStats();
               let rtt = 0;
 
-              stats.forEach((report: any) => {
+              stats.forEach((report) => {
                 if (
                   report.type === 'candidate-pair' &&
                   report.state === 'succeeded'
@@ -367,7 +386,7 @@ const reconnectTimeout = useRef<any>(null);
         });
         
 
-        clearInterval(remoteStreamTimeout.current);
+        if (remoteStreamTimeout.current) clearInterval(remoteStreamTimeout.current);
 
        /* remoteStreamTimeout.current = setInterval(() => {
           const secondsWithoutMedia =
@@ -390,15 +409,15 @@ const reconnectTimeout = useRef<any>(null);
     });
 
     return () => {
-      clearInterval(statsInterval.current);
-      clearInterval(remoteStreamTimeout.current);
-      clearTimeout(typingTimeout.current);
+      if (statsInterval.current) clearInterval(statsInterval.current);
+      if (remoteStreamTimeout.current) clearInterval(remoteStreamTimeout.current);
+      if (typingTimeout.current) clearTimeout(typingTimeout.current);
       cleanupAll();
       socketRef.current?.disconnect();
     };
   }, []);
 
-  const cleanupRemote = () => {
+  function cleanupRemote() {
     peerRef.current?.destroy();
     peerRef.current = null;
 
@@ -410,11 +429,11 @@ const reconnectTimeout = useRef<any>(null);
       }
     );
 
-    clearInterval(statsInterval.current);
-    clearInterval(remoteStreamTimeout.current);
-  };
+    if (statsInterval.current) clearInterval(statsInterval.current);
+    if (remoteStreamTimeout.current) clearInterval(remoteStreamTimeout.current);
+  }
 
-  const cleanupAll = () => {
+  function cleanupAll() {
     cleanupRemote();
 
     streamRef.current?.getTracks().forEach((track) => {
@@ -422,11 +441,11 @@ const reconnectTimeout = useRef<any>(null);
     });
 
     streamRef.current = null;
-  };
+  }
 
   const next = async () => {
     isManualNext.current = true;
-clearTimeout(reconnectTimeout.current);
+    if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current);
     setRemoteReady(false);
     hasTrackedConnection.current = false;
     setPartnerInfo(null);
@@ -451,9 +470,6 @@ clearTimeout(reconnectTimeout.current);
           country,
           region,
           city, 
-          
-                   
-          email,
           guestId,
           isGuest,
         });
@@ -636,7 +652,7 @@ clearTimeout(reconnectTimeout.current);
   const partnerLabel = (
     <>
       {partnerInfo?.flag || '🌎'}{' '}
-      {getGenderIcon(partnerInfo?.gender)}{' '}
+      {getGenderIcon(partnerInfo?.gender || undefined)}{' '}
       {partnerInfo?.country || 'Sin país'}
       {partnerInfo?.region ? ` · ${partnerInfo.region}` : ''}
       {partnerInfo?.city ? ` · ${partnerInfo.city}` : ''}

@@ -16,10 +16,6 @@ export default function AdminLayout({
 
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    checkAdmin();
-  }, []);
-
   async function checkAdmin() {
     const {
       data: { user },
@@ -43,6 +39,11 @@ export default function AdminLayout({
 
     setLoading(false);
   }
+
+  useEffect(() => {
+    const timer = window.setTimeout(checkAdmin, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const links = [
     {

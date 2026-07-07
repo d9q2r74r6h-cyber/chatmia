@@ -42,6 +42,11 @@ export default function AuthPage() {
         
         );
 
+        if (error) {
+          alert(error.message);
+          return;
+        }
+
         if (data?.user) {
           await supabase.from('profiles').insert({
             id: data.user.id,
@@ -52,12 +57,6 @@ export default function AuthPage() {
             interests: [],
             country: '',
           });
-        }
-          
-
-        if (error) {
-          alert(error.message);
-          return;
         }
 
         localStorage.setItem(

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import VideoChat from '@/components/VideoChat';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+import type { User } from '@supabase/supabase-js';
 
 const countries = [
   { code: 'CL', name: 'Chile', flag: '🇨🇱' },
@@ -15,6 +16,11 @@ const countries = [
   { code: 'US', name: 'Estados Unidos', flag: '🇺🇸' },
   { code: 'ES', name: 'España', flag: '🇪🇸' },
 ];
+
+type Profile = {
+  username?: string | null;
+  role?: string | null;
+};
 
 export default function Page() {
   const [gender, setGender] = useState<string | null>(null);
@@ -40,17 +46,13 @@ export default function Page() {
     
   
 
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [entering, setEntering] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   const previewVideoRef = useRef<HTMLVideoElement>(null);
   const previewStreamRef = useRef<MediaStream | null>(null);
-
-  useEffect(() => {
-    checkUser();
-  }, []);
 
   useEffect(() => {
     const loadLocation = async () => {
@@ -186,6 +188,11 @@ export default function Page() {
     }
     setCheckingAuth(false);
   };
+
+  useEffect(() => {
+    const timer = window.setTimeout(checkUser, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -421,14 +428,6 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="text-center pb-2">
-            <a
-              href="/auth"
-              className="text-pink-400 font-semibold underline underline-offset-4"
-            >
-              Crear cuenta / Iniciar sesión
-            </a>
-          </div>       
           <div className="grid grid-cols-1 gap-3">
             <button
               disabled={!ubicacionLista}
@@ -472,6 +471,18 @@ export default function Page() {
                 🌎 Detectando tu ubicación...
               </div>
             )}
+          </div>
+
+          <div className="text-center border-t border-white/10 pt-4">
+            <span className="text-xs text-white/35">
+              Opcional:
+            </span>{' '}
+            <a
+              href="/auth"
+              className="text-sm text-white/55 hover:text-pink-300 underline underline-offset-4"
+            >
+              crear cuenta / iniciar sesión
+            </a>
           </div>
         </div>
 

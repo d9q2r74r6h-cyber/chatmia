@@ -10,7 +10,15 @@ const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 
-app.use(cors());
+const allowedOrigin = process.env.FRONTEND_ORIGIN
+  ? process.env.FRONTEND_ORIGIN.split(',').map((origin) => origin.trim())
+  : [
+      'https://chatmia.org',
+      'https://www.chatmia.org',
+      'http://localhost:3000',
+    ];
+
+app.use(cors({ origin: allowedOrigin }));
 app.use(express.json());
 
 let supabase = null;
@@ -29,11 +37,31 @@ app.get('/', (req, res) => {
   res.send('ChatMia server running');
 });
 
+app.get('/ice-servers', (req, res) => {
+  const servers = [
+    { urls: 'stun:global.stun.twilio.com:3478' },
+  ];
+
+  if (
+    process.env.TURN_URLS &&
+    process.env.TURN_USERNAME &&
+    process.env.TURN_CREDENTIAL
+  ) {
+    servers.push({
+      urls: process.env.TURN_URLS.split(',').map((url) => url.trim()),
+      username: process.env.TURN_USERNAME,
+      credential: process.env.TURN_CREDENTIAL,
+    });
+  }
+
+  res.json({ iceServers: servers });
+});
+
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: allowedOrigin,
     methods: ['GET', 'POST'],
   },
 });
@@ -300,8 +328,33 @@ function disconnectPair(socketId) {
   io.to(partnerId).emit('partner-left');
 }
 
-io.on('connection', (socket) => {
+async function authenticateSocket(socket) {
+  const accessToken = socket.handshake.auth?.accessToken;
+
+  if (!supabase || !accessToken) {
+    socket.user = null;
+    return;
+  }
+
+  const { data, error } = await supabase.auth.getUser(accessToken);
+  socket.user = error ? null : data?.user || null;
+}
+
+async function isEmailBanned(email) {
+  if (!supabase || !email) return false;
+
+  const { data } = await supabase
+    .from('banned_users')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle();
+
+  return Boolean(data);
+}
+
+io.on('connection', async (socket) => {
   console.log('CONNECTED:', socket.id);
+  await authenticateSocket(socket);
 
   emitOnlineCount();  
   emitAdminStats();
@@ -309,8 +362,6 @@ io.on('connection', (socket) => {
   socket.on('find-partner', async ({
     gender,
     country,
-    email,
-    userId,
     guestId,
     isGuest,
     region,
@@ -325,17 +376,25 @@ io.on('connection', (socket) => {
     });
     
 
+    const authenticatedEmail = socket.user?.email || null;
+    const guestMode = !authenticatedEmail;
+
+    if (await isEmailBanned(authenticatedEmail)) {
+      socket.emit('banned');
+      socket.disconnect(true);
+      return;
+    }
+
     if (!socket.visitSaved) { 
       saveVisit(socket, {
-        email,
-        guestId,
-        isGuest,
+        email: authenticatedEmail,
+        guestId: guestMode ? guestId : null,
+        isGuest: guestMode,
         gender,
         country: country?.name || null,
         flag: country?.flag || '',
         region: region || null,
         city: city || null,
-        userId: userId || null,
       }).catch(console.error);
       
       socket.visitSaved = true;
@@ -348,13 +407,13 @@ io.on('connection', (socket) => {
 
 
 }
-      socket.isGuest = isGuest ?? !email;
-      socket.guestId = guestId || null;
+      socket.isGuest = guestMode;
+      socket.guestId = guestMode ? guestId || null : null;
 
       users.set(socket.id, {
-        email: email || null,
-        guestId: guestId || null,
-        isGuest: isGuest ?? !email,
+        email: authenticatedEmail,
+        guestId: guestMode ? guestId || null : null,
+        isGuest: guestMode,
         gender: gender || null,
         country: country?.name || null,
         flag: country?.flag || '🌎',
@@ -370,13 +429,13 @@ io.on('connection', (socket) => {
   
       let shadowBanned = false;
   
-      if (supabase && email) {
+      if (supabase && authenticatedEmail) {
   
         const { data: profile } =
           await supabase
             .from('profiles')
             .select('shadow_banned')
-            .eq('email', email)
+            .eq('email', authenticatedEmail)
             .single();
 
   
@@ -458,6 +517,7 @@ await incrementarMatchCount(partnerId);
     }
   );
   socket.on('signal', ({ to, signal }) => {
+    if (partners.get(socket.id) !== to) return;
     io.to(to).emit('signal', { signal });
   });
 
@@ -467,6 +527,7 @@ await incrementarMatchCount(partnerId);
   socket.on('chat-message', async ({ message }) => {
 
     if (!partners.has(socket.id)) return;
+    if (typeof message !== 'string') return;
     if (message.length > 500) return;
 
     const now = Date.now();
@@ -494,10 +555,6 @@ if (msgData.count > 8) {
   return;
 }
     const partnerSocketId = partners.get(socket.id);
-  
-    const partnerSocket = io.sockets.sockets.get(
-      partnerSocketId
-    );
   
     const lower = message.toLowerCase();
   

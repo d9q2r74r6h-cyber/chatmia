@@ -12,8 +12,29 @@ import {
 } from 'recharts';
 
 import { supabase } from '@/lib/supabase';
-import Link from 'next/link';
-import { RefreshCwIcon } from 'lucide-react';
+
+type ChartPoint = {
+  hour: string;
+  users: number;
+};
+
+type Visit = {
+  id: string | number;
+  socket_id: string | null;
+  email: string | null;
+  guest_id: string | null;
+  gender: string | null;
+  country: string | null;
+  flag: string | null;
+  region: string | null;
+  city: string | null;
+  match_count: number | null;
+  next_count: number | null;
+  messages_sent: number | null;
+  duration_minutes: number | null;
+  disconnected_at: string | null;
+  last_seen_at: string | null;
+};
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -40,38 +61,8 @@ export default function DashboardPage() {
     avgDuration: 0,
   });
 
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [lastVisits, setLastVisits] = useState<any[]>([]);
-
-  useEffect(() => {
-    loadDashboard();
-
-    const interval = setInterval(() => {
-      loadDashboard();
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    const socket = io(
-      process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000',
-      { transports: ['websocket'] }
-    );
-
-    socket.on('admin-stats', (data) => {
-      setRealtime({
-        online: data.online || 0,
-        activeChats: data.activeChats || 0,
-        waitingNormal: data.waitingNormal || 0,
-        waitingShadow: data.waitingShadow || 0,
-      });
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
+  const [chartData, setChartData] = useState<ChartPoint[]>([]);
+  const [lastVisits, setLastVisits] = useState<Visit[]>([]);
 
   async function loadDashboard() {
     const [reportsRes, flaggedRes, bansRes, messagesRes, visitsRes] =
@@ -128,7 +119,7 @@ export default function DashboardPage() {
       messages: messagesRes.count || 0,
     });
 
-    const visits = visitsRes.data || [];
+    const visits = (visitsRes.data || []) as Visit[];
 
     const totalMatches = visits.reduce(
       (acc, visit) => acc + (visit.match_count || 0),
@@ -195,6 +186,39 @@ export default function DashboardPage() {
       }))
     );
   }
+
+  useEffect(() => {
+    const initialLoad = window.setTimeout(loadDashboard, 0);
+
+    const interval = setInterval(() => {
+      loadDashboard();
+    }, 5000);
+
+    return () => {
+      window.clearTimeout(initialLoad);
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    const socket = io(
+      process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000',
+      { transports: ['websocket'] }
+    );
+
+    socket.on('admin-stats', (data) => {
+      setRealtime({
+        online: data.online || 0,
+        activeChats: data.activeChats || 0,
+        waitingNormal: data.waitingNormal || 0,
+        waitingShadow: data.waitingShadow || 0,
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const realtimeCards = [
     { title: 'Usuarios Online', value: realtime.online },

@@ -1,7 +1,5 @@
 'use client';
 
-redirectTo: 'https://chatmia.org/reset-password'
-
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 

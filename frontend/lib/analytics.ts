@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 
 export async function trackEvent(
   eventName: string,
-  metadata: any = {}
+  metadata: Record<string, unknown> = {}
 ) {
   try {
     const {

@@ -76,20 +76,30 @@ export default function MessagesPage() {
     }
   }
 
-  async function shadowBan(userId: string) {
+  async function shadowBan(email: string | null) {
+    if (!email) {
+      alert('Este mensaje no tiene email de remitente.');
+      return;
+    }
+
     await supabase
       .from('profiles')
       .update({
         shadow_banned: true,
       })
-      .eq('id', userId);
+      .eq('email', email);
 
     alert('User shadowbanned');
   }
 
-  async function banUser(userId: string) {
+  async function banUser(email: string | null) {
+    if (!email) {
+      alert('Este mensaje no tiene email de remitente.');
+      return;
+    }
+
     await supabase.from('banned_users').insert({
-      user_id: userId,
+      email,
       reason: 'Admin moderation',
       is_permanent: true,
     });
