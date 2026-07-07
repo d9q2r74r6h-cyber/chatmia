@@ -37,6 +37,39 @@ app.get('/', (req, res) => {
   res.send('ChatMia server running');
 });
 
+app.get('/health', (req, res) => {
+  res.json({
+    ok: true,
+    service: 'chatmia-backend',
+    online: io.engine.clientsCount,
+    activeChats: partners.size / 2,
+    waitingNormal: Boolean(waitingNormal),
+    waitingShadow: Boolean(waitingShadow),
+    supabaseConfigured: Boolean(supabase),
+    turnConfigured: Boolean(
+      process.env.TURN_URLS &&
+      process.env.TURN_USERNAME &&
+      process.env.TURN_CREDENTIAL
+    ),
+    allowedOrigin,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get('/ready', (req, res) => {
+  const ready = Boolean(supabase);
+
+  res.status(ready ? 200 : 503).json({
+    ready,
+    supabaseConfigured: Boolean(supabase),
+    turnConfigured: Boolean(
+      process.env.TURN_URLS &&
+      process.env.TURN_USERNAME &&
+      process.env.TURN_CREDENTIAL
+    ),
+  });
+});
+
 app.get('/ice-servers', (req, res) => {
   const servers = [
     { urls: 'stun:global.stun.twilio.com:3478' },
@@ -333,11 +366,18 @@ async function authenticateSocket(socket) {
 
   if (!supabase || !accessToken) {
     socket.user = null;
+    console.log('SOCKET AUTH: guest', socket.id);
     return;
   }
 
   const { data, error } = await supabase.auth.getUser(accessToken);
   socket.user = error ? null : data?.user || null;
+
+  console.log(
+    'SOCKET AUTH:',
+    socket.id,
+    socket.user?.email || 'invalid-token'
+  );
 }
 
 async function isEmailBanned(email) {
@@ -380,6 +420,7 @@ io.on('connection', async (socket) => {
     const guestMode = !authenticatedEmail;
 
     if (await isEmailBanned(authenticatedEmail)) {
+      console.log('BANNED SOCKET BLOCKED:', authenticatedEmail, socket.id);
       socket.emit('banned');
       socket.disconnect(true);
       return;
@@ -400,10 +441,12 @@ io.on('connection', async (socket) => {
       socket.visitSaved = true;
 
   socket.visitSaved = true;
-  console.log(
-    'VISITA INICIAL GUARDADA:',
-    socket.id
-  );
+  console.log('VISITA INICIAL GUARDADA:', {
+    socketId: socket.id,
+    email: authenticatedEmail,
+    guestId: guestMode ? guestId || null : null,
+    guestMode,
+  });
 
 
 }
@@ -481,7 +524,11 @@ await incrementarMatchCount(partnerId);
         console.log(
           'MATCHED:',
           socket.id,
-          partnerId
+          partnerId,
+          {
+            user: users.get(socket.id) || null,
+            partner: users.get(partnerId) || null,
+          }
         );
 
         emitAdminStats();

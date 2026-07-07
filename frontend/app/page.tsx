@@ -220,7 +220,7 @@ export default function Page() {
   
     if (!country.name || !location.region || !location.city) {
       alert(
-        'Estamos detectando tu ubicación. Intenta nuevamente en unos segundos.'
+        'Estamos detectando tu ubicacion. Intenta nuevamente en unos segundos.'
       );
       return;
     }
@@ -292,7 +292,7 @@ export default function Page() {
             </div>
 
             <div className="text-white/50 text-sm mt-2">
-              Preparando conexión segura...
+              Preparando conexion segura...
             </div>
           </div>
         </div>
@@ -361,19 +361,19 @@ export default function Page() {
           </h1>
 
           <p className="text-white/40 mt-5 text-lg leading-relaxed">
-            Conecta instantáneamente con personas de todo el mundo mediante videochat en vivo.
-            Privado, rápido y diseñado para sentirse natural.
+            Entra como invitado y conecta al instante con personas de todo el mundo.
+            Crear cuenta es opcional.
           </p>
         </div>
 
         <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-6 backdrop-blur-xl space-y-6">
           <div>
             <h2 className="text-lg font-medium">
-              Elige con quién quieres hablar
+              Entra como invitado
             </h2>
 
             <p className="text-sm text-white/40 mt-1">
-              Selecciona una preferencia para comenzar
+              No necesitas cuenta para comenzar. Selecciona una preferencia y empieza.
             </p>
           </div>
 
@@ -400,7 +400,7 @@ export default function Page() {
 
           <div className="space-y-2">
             <div className="text-sm text-white/60">
-              Cámara
+              Camara
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -481,7 +481,7 @@ export default function Page() {
               href="/auth"
               className="text-sm text-white/55 hover:text-pink-300 underline underline-offset-4"
             >
-              crear cuenta / iniciar sesión
+              crear cuenta / iniciar sesion
             </a>
           </div>
         </div>

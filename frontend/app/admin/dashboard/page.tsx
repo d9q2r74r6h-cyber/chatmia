@@ -257,10 +257,10 @@ export default function DashboardPage() {
     { title: 'Matches', value: analytics.matches },
     { title: 'Nexts', value: analytics.nexts },
     { title: 'Mensajes Enviados', value: analytics.messagesSent },
-    { title: 'Usuarios Únicos', value: analytics.uniqueUsers },
-    { title: 'Países', value: analytics.countries },
+    { title: 'Usuarios unicos', value: analytics.uniqueUsers },
+    { title: 'Paises', value: analytics.countries },
     {
-      title: 'Duración Promedio',
+      title: 'Duracion Promedio',
       value: Number(analytics.avgDuration.toFixed(2)),
       suffix: ' min',
     },
@@ -357,14 +357,14 @@ export default function DashboardPage() {
             <thead>
             <tr className="text-zinc-400">
             <th className="pb-4">Entrada</th>
-            <th className="pb-4">País</th>
-            <th className="pb-4">Región</th>
+            <th className="pb-4">Pais</th>
+            <th className="pb-4">Region</th>
             <th className="pb-4">Ciudad</th>
-            <th className="pb-4">Género</th>
+            <th className="pb-4">Genero</th>
             <th className="pb-4">Matches</th>
             <th className="pb-4">Nexts</th>
             <th className="pb-4">Mensajes</th>
-            <th className="pb-4">Duración</th>
+            <th className="pb-4">Duracion</th>
             <th className="pb-4">Usuario</th>
           </tr>
             </thead>
