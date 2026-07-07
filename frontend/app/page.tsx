@@ -23,6 +23,113 @@ type Profile = {
   role?: string | null;
 };
 
+type LocationInfo = {
+  countryCode?: string;
+  region?: string;
+  city?: string;
+  source: 'browser' | 'ip';
+};
+
+const fetchJsonWithTimeout = async (
+  url: string,
+  timeoutMs: number
+): Promise<unknown> => {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+
+    if (!response.ok) {
+      throw new Error(`Location request failed: ${response.status}`);
+    }
+
+    return response.json();
+  } finally {
+    window.clearTimeout(timeout);
+  }
+};
+
+const readBrowserCoordinates = (): Promise<GeolocationCoordinates | null> => {
+  if (!navigator.geolocation) return Promise.resolve(null);
+
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve(position.coords),
+      () => resolve(null),
+      {
+        enableHighAccuracy: false,
+        maximumAge: 10 * 60 * 1000,
+        timeout: 5000,
+      }
+    );
+  });
+};
+
+const detectBrowserLocation = async (): Promise<LocationInfo | null> => {
+  const coords = await readBrowserCoordinates();
+
+  if (!coords) return null;
+
+  const params = new URLSearchParams({
+    format: 'jsonv2',
+    lat: String(coords.latitude),
+    lon: String(coords.longitude),
+    'accept-language': 'es',
+  });
+
+  const data = (await fetchJsonWithTimeout(
+    `https://nominatim.openstreetmap.org/reverse?${params.toString()}`,
+    5000
+  )) as {
+    address?: {
+      country_code?: string;
+      state?: string;
+      region?: string;
+      city?: string;
+      town?: string;
+      village?: string;
+      municipality?: string;
+      county?: string;
+    };
+  };
+
+  const address = data.address;
+
+  if (!address) return null;
+
+  return {
+    countryCode: address.country_code?.toUpperCase(),
+    region: address.state || address.region || '',
+    city:
+      address.city ||
+      address.town ||
+      address.village ||
+      address.municipality ||
+      address.county ||
+      '',
+    source: 'browser',
+  };
+};
+
+const detectIpLocation = async (): Promise<LocationInfo | null> => {
+  const data = (await fetchJsonWithTimeout(
+    'https://ipapi.co/json/',
+    3500
+  )) as {
+    country_code?: string;
+    region?: string;
+    city?: string;
+  };
+
+  return {
+    countryCode: data.country_code,
+    region: data.region || '',
+    city: data.city || '',
+    source: 'ip',
+  };
+};
+
 export default function Page() {
   const [gender, setGender] = useState<string | null>(null);
   const [cameraMode, setCameraMode] =
@@ -54,31 +161,47 @@ export default function Page() {
 
   useEffect(() => {
     const loadLocation = async () => {
-      try {
-        const controller = new AbortController();
-        const timeout = window.setTimeout(() => controller.abort(), 3500);
-        const response = await fetch('https://ipapi.co/json/', {
-          signal: controller.signal,
+      const applyDetectedLocation = (detectedLocation: LocationInfo) => {
+        console.log('LOCATION', {
+          source: detectedLocation.source,
+          city: detectedLocation.city,
+          region: detectedLocation.region,
+          countryCode: detectedLocation.countryCode,
         });
-        window.clearTimeout(timeout);
-        const data = await response.json();
-  
-        console.log('LOCATION', data.city, data.region);
-  
+
         setLocation({
-          region: data.region || '',
-          city: data.city || '',
+          region: detectedLocation.region || '',
+          city: detectedLocation.city || '',
         });
-  
+
         const detected = countries.find(
-          (item) => item.code === data.country_code
+          (item) => item.code === detectedLocation.countryCode
         );
-  
+
         if (detected) {
           setCountry(detected);
         }
+      };
+
+      try {
+        const browserLocation = await detectBrowserLocation();
+
+        if (browserLocation) {
+          applyDetectedLocation(browserLocation);
+          return;
+        }
       } catch (err) {
-        console.error(err);
+        console.error('Browser location failed', err);
+      }
+
+      try {
+        const ipLocation = await detectIpLocation();
+
+        if (ipLocation) {
+          applyDetectedLocation(ipLocation);
+        }
+      } catch (err) {
+        console.error('IP location failed', err);
       }
     };
   
@@ -167,32 +290,6 @@ export default function Page() {
 
     if (profileData) {
       setProfile(profileData);
-    }
-    try {
-      const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 3500);
-      const response = await fetch('https://ipapi.co/json/', {
-        signal: controller.signal,
-      });
-      window.clearTimeout(timeout);
-      const data = await response.json();
-
-      setLocation({
-      region: data.region || '',
-      city: data.city || '',
-    });
-
-    
-    
-      const detected = countries.find(
-        (item) => item.code === data.country_code
-      );
-    
-      if (detected) {
-        setCountry(detected);
-      }
-    } catch (err) {
-      console.error(err);
     }
     setCheckingAuth(false);
   };
